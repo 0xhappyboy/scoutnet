@@ -21,6 +21,8 @@ use super::ui;
 enum PageIndex {
     Welcome,
     Home,
+    Safe,
+    Test,
 }
 
 #[derive(Debug)]
@@ -63,6 +65,12 @@ impl App {
             PageIndex::Home => {
                 ui::home::layout(self, frame);
             }
+            PageIndex::Safe => {
+                ui::safe::layout(self, frame);
+            }
+            PageIndex::Test => {
+                ui::test::layout(self, frame);
+            }
         }
     }
 
@@ -81,14 +89,25 @@ impl App {
             InputMode::Normal => match key_event.code {
                 KeyCode::Char('e') => self.input_mode = InputMode::Editing,
                 KeyCode::Char('q') => self.exit(),
-                KeyCode::Char('s') => self.page_index = PageIndex::Home,
-                KeyCode::Char('d') => self.page_index = PageIndex::Welcome,
+                KeyCode::Char('1') => self.page_index = PageIndex::Welcome,
+                KeyCode::Char('2') => self.page_index = PageIndex::Home,
+                KeyCode::Char('3') => self.page_index = PageIndex::Safe,
+                KeyCode::Char('4') => self.page_index = PageIndex::Test,
                 KeyCode::Esc => self.exit(),
                 _ => {}
             },
             InputMode::Editing => match key_event.code {
-                KeyCode::Esc => self.input_mode = InputMode::Normal,
+                KeyCode::Esc => {
+                    self.input_mode = InputMode::Normal;
+                    self.input_text.clear();
+                }
                 KeyCode::Char(insert) => self.input_text.push(insert),
+                KeyCode::Backspace => {
+                    if self.input_text.len() > 0 {
+                        let removed = &self.input_text[0..self.input_text.len() - 1];
+                        self.input_text = removed.to_owned();
+                    }
+                }
                 _ => {}
             },
         }

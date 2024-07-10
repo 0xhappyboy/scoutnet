@@ -28,8 +28,8 @@ pub fn layout(app: &App, frame: &mut Frame) {
         .block(Block::bordered())
         .style(Style::default().white())
         .highlight_style(Style::default().yellow())
-        .select(1)
-        .padding("  ", "  ");
+        .select(2)
+        .padding("  ", "  |  ");
     frame.render_widget(tabs, full_layout[0]);
     // ------------------------ full layout 0 area start ------------------------
     // ------------------------ full layout 1 area start ------------------------
