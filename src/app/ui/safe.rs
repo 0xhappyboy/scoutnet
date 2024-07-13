@@ -12,6 +12,8 @@ use ratatui::{
 
 use crate::app::app::App;
 
+use super::config::TABS;
+
 pub fn layout(app: &App, frame: &mut Frame) {
     // full layout
     let full_layout = Layout::default()
@@ -24,12 +26,12 @@ pub fn layout(app: &App, frame: &mut Frame) {
         ])
         .split(frame.size());
     // ------------------------ full layout 0 area start ------------------------
-    let tabs = Tabs::new(vec!["Home", "Monitor", "Safe", "Test"])
+    let tabs = Tabs::new(TABS)
         .block(Block::bordered())
         .style(Style::default().white())
         .highlight_style(Style::default().yellow())
         .select(2)
-        .padding("  ", "  |  ");
+        .padding("  ", "  ");
     frame.render_widget(tabs, full_layout[0]);
     // ------------------------ full layout 0 area start ------------------------
     // ------------------------ full layout 1 area start ------------------------

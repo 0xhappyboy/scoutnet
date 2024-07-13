@@ -1,16 +1,19 @@
-/// home layout
+/// monitor layout
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style, Stylize},
     symbols,
     text::{Line, Span},
     widgets::{
-        Block, Borders, List, ListState, Paragraph, RenderDirection, Row, Sparkline, Table, Tabs,
+        Axis, Block, Chart, Dataset, GraphType, List, ListState, Padding, Paragraph, Row, Table,
+        Tabs,
     },
     Frame,
 };
 
 use crate::app::app::App;
+
+use super::config::{MonitorPageArea, TABS};
 
 pub fn layout(app: &App, frame: &mut Frame) {
     // full layout
@@ -24,9 +27,9 @@ pub fn layout(app: &App, frame: &mut Frame) {
         ])
         .split(frame.size());
     // ------------------------ full layout 0 area start ------------------------
-    let tabs = Tabs::new(vec!["Home", "Monitor", "Safe", "Test"])
-        .block(Block::bordered())
-        .style(Style::default().white())
+    let tabs = Tabs::new(TABS)
+        .block(Block::bordered().border_style(Style::default().white()))
+        .style(Style::default())
         .highlight_style(Style::default().yellow())
         .select(1)
         .padding("  ", "  ");
@@ -34,10 +37,15 @@ pub fn layout(app: &App, frame: &mut Frame) {
     // ------------------------ full layout 0 area start ------------------------
     // ------------------------ full layout 1 area start ------------------------
     // network device list
-    let mut network_device_list_state = ListState::default();
-    let network_device_list_items = ["device 1", "device 2", "device 3", "device 4", "device 5"];
+    let network_device_list_items = app.monitor_page_name_list.clone();
     let network_device_list = List::new(network_device_list_items)
-        .block(Block::bordered().title("Network Devices"))
+        .block(Block::bordered().title("Network Devices").border_style(
+            if app.monitor_page_selecting_area == MonitorPageArea::Area_1 {
+                Style::default().green()
+            } else {
+                Style::default().gray()
+            },
+        ))
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
         .highlight_symbol(">>")
         .repeat_highlight_symbol(true);
@@ -63,7 +71,13 @@ pub fn layout(app: &App, frame: &mut Frame) {
         // It has an optional footer, which is simply a Row always visible at the bottom.
         .footer(Row::new(vec!["Updated on Dec 28"]))
         // As any other widget, a Table can be wrapped in a Block.
-        .block(Block::bordered().title("Network Packet"))
+        .block(Block::bordered().title("Network Packet").border_style(
+            if app.monitor_page_selecting_area == MonitorPageArea::Area_2 {
+                Style::default().green()
+            } else {
+                Style::default().gray()
+            },
+        ))
         // The selected row and its content can also be styled.
         .highlight_style(Style::new().reversed())
         // ...and potentially show a symbol in front of the selection.
@@ -85,19 +99,73 @@ pub fn layout(app: &App, frame: &mut Frame) {
     let mut state = ListState::default();
     let items = ["Item 1", "Item 2", "Item 3"];
     let list = List::new(items)
-        .block(Block::bordered().title("Data Details"))
+        .block(Block::bordered().title("Data Details").border_style(
+            if app.monitor_page_selecting_area == MonitorPageArea::Area_3 {
+                Style::default().green()
+            } else {
+                Style::default().gray()
+            },
+        ))
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
         .highlight_symbol(">>")
         .repeat_highlight_symbol(true);
+
     frame.render_widget(list, full_layout_2_split[0]);
-    // Flow
-    let flow = Sparkline::default()
-        .block(Block::bordered().title("Flow"))
-        .data(&[0, 2, 3, 4, 1, 4, 10])
-        .max(5)
-        .direction(RenderDirection::RightToLeft)
-        .style(Style::default().red().on_white());
-    frame.render_widget(flow, full_layout_2_split[1]);
+    // chart
+    // Create the datasets to fill the chart with
+    let datasets = vec![
+        // Scatter chart
+        Dataset::default()
+            .name("data1")
+            .marker(symbols::Marker::Dot)
+            .graph_type(GraphType::Scatter)
+            .style(Style::default().cyan())
+            .data(&[(0.0, 5.0), (1.0, 6.0), (1.5, 6.434)]),
+        // Line chart
+        Dataset::default()
+            .name("data2")
+            .marker(symbols::Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(Style::default().magenta())
+            .data(&[(4.0, 5.0), (5.0, 8.0), (7.66, 13.5)]),
+    ];
+
+    // Create the X axis and define its properties
+    let x_axis = Axis::default()
+        .title("X Axis".red())
+        .style(Style::default().white())
+        .bounds([0.0, 10.0])
+        .labels(vec!["0.0".into(), "5.0".into(), "10.0".into()]);
+
+    // Create the Y axis and define its properties
+    let y_axis = Axis::default()
+        .title("Y Axis".red())
+        .style(Style::default().white())
+        .bounds([0.0, 10.0])
+        .labels(vec!["0.0".into(), "5.0".into(), "10.0".into()]);
+
+    // Create the chart and link all the parts together
+    let chart = Chart::new(datasets)
+        .block(
+            Block::bordered()
+                .padding(Padding {
+                    left: 1,
+                    right: 1,
+                    top: 1,
+                    bottom: 0,
+                })
+                .title("Chart")
+                .border_style(
+                    if app.monitor_page_selecting_area == MonitorPageArea::Area_4 {
+                        Style::default().green()
+                    } else {
+                        Style::default().gray()
+                    },
+                ),
+        )
+        .x_axis(x_axis)
+        .y_axis(y_axis);
+    frame.render_widget(chart, full_layout_2_split[1]);
     // ------------------------ full layout 2 area start ------------------------
     // ------------------------ input area start ------------------------
     let text: Vec<Line> = vec![Line::from(app.input_text.to_string())];
@@ -109,9 +177,10 @@ pub fn layout(app: &App, frame: &mut Frame) {
                 Style::default().add_modifier(Modifier::BOLD),
             ))
     };
-    let paragraph = Paragraph::new(text.clone())
+    let paragraph: Paragraph = Paragraph::new(text.clone())
         .style(Style::default().fg(Color::Gray))
         .block(create_block("Default alignment (Left), no wrap"));
+
     frame.render_widget(paragraph, full_layout[3]);
     // ------------------------ input area end ------------------------
 }

@@ -14,16 +14,10 @@ use ratatui::{
     Frame,
 };
 
-use super::init;
-use super::ui;
+use crate::net::device::Device;
 
-#[derive(Debug)]
-enum PageIndex {
-    Welcome,
-    Home,
-    Safe,
-    Test,
-}
+use super::ui::{self, config::MonitorPageArea};
+use super::{config::PageIndex, init};
 
 #[derive(Debug)]
 enum InputMode {
@@ -33,19 +27,27 @@ enum InputMode {
 
 #[derive(Debug)]
 pub struct App {
-    exit: bool,
+    // app
     pub input_text: String,
     pub input_mode: InputMode,
     pub page_index: PageIndex,
+    exit: bool,
+    // monitor page
+    pub monitor_page_selecting_area: MonitorPageArea,
+    pub monitor_page_selected_area: MonitorPageArea,
+    pub monitor_page_name_list: Vec<String>,
 }
 
 impl App {
     pub fn new() -> Self {
         App {
-            exit: false,
             input_text: String::from(""),
             input_mode: InputMode::Normal,
-            page_index: PageIndex::Welcome,
+            page_index: PageIndex::Monitor,
+            exit: false,
+            monitor_page_selecting_area: MonitorPageArea::Area_1,
+            monitor_page_selected_area: MonitorPageArea::None,
+            monitor_page_name_list: vec![],
         }
     }
 
@@ -57,59 +59,129 @@ impl App {
         Ok(())
     }
 
-    fn render_frame(&self, frame: &mut Frame) {
+    fn render_frame(&mut self, frame: &mut Frame) {
         match self.page_index {
             PageIndex::Welcome => {
                 ui::welcome::layout(self, frame);
             }
-            PageIndex::Home => {
-                ui::home::layout(self, frame);
+            PageIndex::Monitor => {
+                self.handle_monitor_page_data();
+                ui::monitor::layout(self, frame);
             }
             PageIndex::Safe => {
                 ui::safe::layout(self, frame);
             }
-            PageIndex::Test => {
-                ui::test::layout(self, frame);
+            PageIndex::Http => {
+                ui::http::layout(self, frame);
             }
         }
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
         match event::read()? {
-            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                self.handle_key_event(key_event)
-            }
+            Event::Key(key_event) => self.handle_key_event(key_event),
             _ => {}
         };
         Ok(())
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
-        match self.input_mode {
-            InputMode::Normal => match key_event.code {
-                KeyCode::Char('e') => self.input_mode = InputMode::Editing,
-                KeyCode::Char('q') => self.exit(),
-                KeyCode::Char('1') => self.page_index = PageIndex::Welcome,
-                KeyCode::Char('2') => self.page_index = PageIndex::Home,
-                KeyCode::Char('3') => self.page_index = PageIndex::Safe,
-                KeyCode::Char('4') => self.page_index = PageIndex::Test,
-                KeyCode::Esc => self.exit(),
-                _ => {}
-            },
-            InputMode::Editing => match key_event.code {
-                KeyCode::Esc => {
-                    self.input_mode = InputMode::Normal;
-                    self.input_text.clear();
+        self.handle_global_basic_events(key_event);
+        match self.page_index {
+            PageIndex::Welcome => {}
+            PageIndex::Monitor => {
+                self.handle_monitor_page_basic_events(key_event);
+            }
+            PageIndex::Safe => {}
+            PageIndex::Http => {}
+        }
+
+        // match self.input_mode {
+        //     InputMode::Normal => match key_event.code {
+        //         KeyCode::Char('e') => self.input_mode = InputMode::Editing,
+        //         KeyCode::Char('q') => self.exit(),
+        //         KeyCode::Char('1') => self.page_index = PageIndex::Welcome,
+        //         KeyCode::Char('2') => self.page_index = PageIndex::Home,
+        //         KeyCode::Char('3') => self.page_index = PageIndex::Safe,
+        //         KeyCode::Char('4') => self.page_index = PageIndex::Test,
+        //         KeyCode::Esc => self.exit(),
+        //         _ => {}
+        //     },
+        //     InputMode::Editing => match key_event.code {
+        //         KeyCode::Esc => {
+        //             self.input_mode = InputMode::Normal;
+        //             self.input_text.clear();
+        //         }
+        //         KeyCode::Char(insert) => self.input_text.push(insert),
+        //         KeyCode::Backspace => {
+        //             if self.input_text.len() > 0 {
+        //                 let removed = &self.input_text[0..self.input_text.len() - 1];
+        //                 self.input_text = removed.to_owned();
+        //             }
+        //         }
+        //         _ => {}
+        //     },
+        // }
+    }
+
+    fn handle_global_basic_events(&mut self, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Esc => {
+                self.exit();
+            }
+            KeyCode::Char('1') => {
+                self.page_index = PageIndex::Welcome;
+            }
+            KeyCode::Char('2') => {
+                self.page_index = PageIndex::Monitor;
+            }
+            KeyCode::Char('3') => {
+                self.page_index = PageIndex::Safe;
+            }
+            KeyCode::Char('4') => {
+                self.page_index = PageIndex::Http;
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_monitor_page_data(&mut self) {
+        if (self.monitor_page_name_list.is_empty()) {
+            self.monitor_page_name_list = Device::get_device_name_list();
+        }
+    }
+
+    fn handle_monitor_page_basic_events(&mut self, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Up => {
+                if (self.monitor_page_selecting_area == MonitorPageArea::Area_3) {
+                    self.monitor_page_selecting_area = MonitorPageArea::Area_1;
+                } else if (self.monitor_page_selecting_area == MonitorPageArea::Area_4) {
+                    self.monitor_page_selecting_area = MonitorPageArea::Area_2;
                 }
-                KeyCode::Char(insert) => self.input_text.push(insert),
-                KeyCode::Backspace => {
-                    if self.input_text.len() > 0 {
-                        let removed = &self.input_text[0..self.input_text.len() - 1];
-                        self.input_text = removed.to_owned();
-                    }
+            }
+            KeyCode::Down => {
+                if (self.monitor_page_selecting_area == MonitorPageArea::Area_1) {
+                    self.monitor_page_selecting_area = MonitorPageArea::Area_3;
+                } else if (self.monitor_page_selecting_area == MonitorPageArea::Area_2) {
+                    self.monitor_page_selecting_area = MonitorPageArea::Area_4;
                 }
-                _ => {}
-            },
+            }
+            KeyCode::Left => {
+                if (self.monitor_page_selecting_area == MonitorPageArea::Area_2) {
+                    self.monitor_page_selecting_area = MonitorPageArea::Area_1;
+                } else if (self.monitor_page_selecting_area == MonitorPageArea::Area_4) {
+                    self.monitor_page_selecting_area = MonitorPageArea::Area_3;
+                }
+            }
+            KeyCode::Right => {
+                if (self.monitor_page_selecting_area == MonitorPageArea::Area_1) {
+                    self.monitor_page_selecting_area = MonitorPageArea::Area_2;
+                } else if (self.monitor_page_selecting_area == MonitorPageArea::Area_3) {
+                    self.monitor_page_selecting_area = MonitorPageArea::Area_4;
+                }
+            }
+            _ => {}
         }
     }
 

@@ -3,6 +3,7 @@ use std::io;
 use app::{app::App, init};
 
 mod app;
+mod net;
 
 fn main() -> io::Result<()> {
     let mut terminal = init::init()?;
