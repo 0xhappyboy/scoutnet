@@ -4,12 +4,10 @@ use ratatui::{
     style::{Color, Modifier, Style, Stylize},
     symbols,
     text::{Line, Span},
-    widgets::{
-        Axis, Block, Chart, Dataset, GraphType, List, ListState, Padding, Paragraph, Row, Table,
-        Tabs,
-    },
+    widgets::*,
     Frame,
 };
+use tui_tree_widget::Tree;
 
 use crate::app::app::App;
 
@@ -37,13 +35,34 @@ pub fn layout(app: &App, frame: &mut Frame) {
     // ------------------------ full layout 0 area start ------------------------
     // ------------------------ full layout 1 area start ------------------------
     // network device list
-    let network_device_list_items = app.monitor_page_name_list.clone();
-    let network_device_list = List::new(network_device_list_items)
+    let mut device_list: Vec<Line> = vec![];
+    for (i, v) in app.monitor_page_device_list.iter().enumerate() {
+        let line: Line = vec![
+            v.name.clone().green().bold(),
+            "   ".into(),
+            v.mac.clone().unwrap().to_string().yellow(),
+            "   ".into(),
+            v.flags.clone().to_string().cyan(),
+        ]
+        .into();
+        device_list.push(line);
+    }
+    let network_device_list = List::new(device_list)
         .block(Block::bordered().title("Network Devices").border_style(
             if app.monitor_page_selecting_area == MonitorPageArea::Area_1 {
-                Style::default().green()
+                let style = Style::default().bold();
+                if app.monitor_page_selected_area == MonitorPageArea::Area_1 {
+                    style.green()
+                } else {
+                    style
+                }
             } else {
-                Style::default().gray()
+                let style = Style::default().bold();
+                if app.monitor_page_selected_area == MonitorPageArea::Area_1 {
+                    style.green()
+                } else {
+                    style.gray()
+                }
             },
         ))
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
@@ -73,9 +92,19 @@ pub fn layout(app: &App, frame: &mut Frame) {
         // As any other widget, a Table can be wrapped in a Block.
         .block(Block::bordered().title("Network Packet").border_style(
             if app.monitor_page_selecting_area == MonitorPageArea::Area_2 {
-                Style::default().green()
+                let style = Style::default().bold();
+                if app.monitor_page_selected_area == MonitorPageArea::Area_2 {
+                    style.green()
+                } else {
+                    style
+                }
             } else {
-                Style::default().gray()
+                let style = Style::default().bold();
+                if app.monitor_page_selected_area == MonitorPageArea::Area_2 {
+                    style.green()
+                } else {
+                    style.gray()
+                }
             },
         ))
         // The selected row and its content can also be styled.
@@ -95,22 +124,45 @@ pub fn layout(app: &App, frame: &mut Frame) {
         .direction(Direction::Horizontal)
         .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(full_layout[2]);
-    // net package info
-    let mut state = ListState::default();
-    let items = ["Item 1", "Item 2", "Item 3"];
-    let list = List::new(items)
-        .block(Block::bordered().title("Data Details").border_style(
-            if app.monitor_page_selecting_area == MonitorPageArea::Area_3 {
-                Style::default().green()
-            } else {
-                Style::default().gray()
-            },
+    // net pack tree info
+    let widget = Tree::new(&app.monitor_page_net_pack_info_tree_items)
+        .expect("all item identifiers are unique")
+        .block(
+            Block::bordered()
+                .border_style(
+                    if app.monitor_page_selecting_area == MonitorPageArea::Area_3 {
+                        let style = Style::default().bold();
+                        if app.monitor_page_selected_area == MonitorPageArea::Area_3 {
+                            style.green()
+                        } else {
+                            style
+                        }
+                    } else {
+                        let style = Style::default().bold();
+                        if app.monitor_page_selected_area == MonitorPageArea::Area_3 {
+                            style.green()
+                        } else {
+                            style.gray()
+                        }
+                    },
+                )
+                .title("Pack Info"),
+        )
+        .experimental_scrollbar(Some(
+            Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                .begin_symbol(None)
+                .track_symbol(None)
+                .end_symbol(None),
         ))
-        .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
-        .highlight_symbol(">>")
-        .repeat_highlight_symbol(true);
+        .highlight_style(
+            Style::new()
+                .fg(Color::Black)
+                .bg(Color::LightGreen)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol(">> ");
+    frame.render_widget(widget, full_layout_2_split[0]);
 
-    frame.render_widget(list, full_layout_2_split[0]);
     // chart
     // Create the datasets to fill the chart with
     let datasets = vec![
@@ -157,9 +209,19 @@ pub fn layout(app: &App, frame: &mut Frame) {
                 .title("Chart")
                 .border_style(
                     if app.monitor_page_selecting_area == MonitorPageArea::Area_4 {
-                        Style::default().green()
+                        let style = Style::default().bold();
+                        if app.monitor_page_selected_area == MonitorPageArea::Area_4 {
+                            style.green()
+                        } else {
+                            style
+                        }
                     } else {
-                        Style::default().gray()
+                        let style = Style::default().bold();
+                        if app.monitor_page_selected_area == MonitorPageArea::Area_4 {
+                            style.green()
+                        } else {
+                            style.gray()
+                        }
                     },
                 ),
         )

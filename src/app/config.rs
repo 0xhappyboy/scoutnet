@@ -1,6 +1,6 @@
 use crate::net::device;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum PageIndex {
     Welcome,
     Monitor,
