@@ -13,7 +13,7 @@ use crate::app::app::App;
 
 use super::config::{MonitorPageArea, TABS};
 
-pub fn layout(app: &App, frame: &mut Frame) {
+pub fn layout(app: &mut App, frame: &mut Frame) {
     // full layout
     let full_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -68,28 +68,35 @@ pub fn layout(app: &App, frame: &mut Frame) {
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
         .highlight_symbol(">>")
         .repeat_highlight_symbol(true);
-    // real-time network packet list
-    let rows = [Row::new(vec!["Cell1", "Cell2", "Cell3"])];
-    // Columns widths are constrained in the same way as Layout...
+    // real-time network pack list
+    // build row
+    let mut rows: Vec<Row> = vec![];
+    for (i, v) in app
+        .monitor_page_real_time_net_pack_table_data
+        .iter()
+        .enumerate()
+    {
+        rows.push(Row::new(vec![
+            v.get("k1").unwrap().to_string(),
+            v.get("k2").unwrap().to_string(),
+            v.get("k3").unwrap().to_string(),
+        ]))
+    }
+    // table width
     let widths = [
-        Constraint::Length(5),
-        Constraint::Length(5),
-        Constraint::Length(10),
+        Constraint::Percentage(25),
+        Constraint::Percentage(25),
+        Constraint::Percentage(50),
     ];
+    // table header
+    let header = ["Name", "Address", "Email"]
+        .into_iter()
+        .map(Cell::from)
+        .collect::<Row>()
+        .height(1);
     let table = Table::new(rows, widths)
-        // ...and they can be separated by a fixed spacing.
-        .column_spacing(1)
-        // You can set the style of the entire Table.
-        // It has an optional header, which is simply a Row always visible at the top.
-        .header(
-            Row::new(vec!["Col1", "Col2", "Col3"])
-                .style(Style::new().bold())
-                // To add space between the header and the rest of the rows, specify the margin
-                .bottom_margin(1),
-        )
-        // It has an optional footer, which is simply a Row always visible at the bottom.
-        .footer(Row::new(vec!["Updated on Dec 28"]))
-        // As any other widget, a Table can be wrapped in a Block.
+        .header(header)
+        .footer(Row::new(vec!["aaa", "bbb", "ccc"]))
         .block(Block::bordered().title("Network Packet").border_style(
             if app.monitor_page_selecting_area == MonitorPageArea::Area_2 {
                 let style = Style::default().bold();
@@ -107,9 +114,7 @@ pub fn layout(app: &App, frame: &mut Frame) {
                 }
             },
         ))
-        // The selected row and its content can also be styled.
         .highlight_style(Style::new().reversed())
-        // ...and potentially show a symbol in front of the selection.
         .highlight_symbol(">>");
 
     let full_layout_1_split = Layout::default()
@@ -117,7 +122,12 @@ pub fn layout(app: &App, frame: &mut Frame) {
         .constraints(vec![Constraint::Percentage(30), Constraint::Percentage(70)])
         .split(full_layout[1]);
     frame.render_widget(network_device_list, full_layout_1_split[0]);
-    frame.render_widget(table, full_layout_1_split[1]);
+
+    frame.render_stateful_widget(
+        table,
+        full_layout_1_split[1],
+        &mut app.monitor_page_real_time_net_pack_table_state,
+    );
     // ------------------------ full layout 1 area end ------------------------
     // ------------------------ full layout 2 area start ------------------------
     let full_layout_2_split = Layout::default()
@@ -125,7 +135,7 @@ pub fn layout(app: &App, frame: &mut Frame) {
         .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(full_layout[2]);
     // net pack tree info
-    let widget = Tree::new(&app.monitor_page_net_pack_info_tree_items)
+    let net_pack_tree_info = Tree::new(&app.monitor_page_net_pack_info_tree_items)
         .expect("all item identifiers are unique")
         .block(
             Block::bordered()
@@ -161,7 +171,11 @@ pub fn layout(app: &App, frame: &mut Frame) {
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol(">> ");
-    frame.render_widget(widget, full_layout_2_split[0]);
+    frame.render_stateful_widget(
+        net_pack_tree_info,
+        full_layout_2_split[0],
+        &mut app.monitor_page_net_pack_info_tree_state,
+    );
 
     // chart
     // Create the datasets to fill the chart with
