@@ -1,7 +1,7 @@
 /// monitor layout
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
-    style::{Color, Modifier, Style, Stylize},
+    layout::{Constraint, Direction, Layout, Margin, Rect},
+    style::{Color, Modifier, Style, Styled, Stylize},
     symbols,
     text::{Line, Span},
     widgets::*,
@@ -12,6 +12,22 @@ use tui_tree_widget::Tree;
 use crate::app::app::App;
 
 use super::config::{MonitorPageArea, TABS};
+
+// real time net pack table item height
+pub const REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT: usize = 1;
+pub const DEVICE_TABLE_ITEM_HEIGHT: usize = 1;
+
+const REAL_TIME_PACK_TABLE_HEADER: [&str; 7] = [
+    "No",
+    "Time",
+    "Source",
+    "Destination",
+    "Protocol",
+    "Length",
+    "Info",
+];
+
+const DEVICE_TABLE_HEADER: [&str; 3] = ["Name", "Mac", "Flag"];
 
 pub fn layout(app: &mut App, frame: &mut Frame) {
     // full layout
@@ -25,109 +41,17 @@ pub fn layout(app: &mut App, frame: &mut Frame) {
         ])
         .split(frame.size());
     // ------------------------ full layout 0 area start ------------------------
-    let tabs = Tabs::new(TABS)
-        .block(Block::bordered().border_style(Style::default().white()))
-        .style(Style::default())
-        .highlight_style(Style::default().yellow())
-        .select(1)
-        .padding("  ", "  ");
-    frame.render_widget(tabs, full_layout[0]);
+    render_tab_area(app, frame, full_layout[0]);
     // ------------------------ full layout 0 area start ------------------------
     // ------------------------ full layout 1 area start ------------------------
-    // network device list
-    let mut device_list: Vec<Line> = vec![];
-    for (i, v) in app.monitor_page_device_list.iter().enumerate() {
-        let line: Line = vec![
-            v.name.clone().green().bold(),
-            "   ".into(),
-            v.mac.clone().unwrap().to_string().yellow(),
-            "   ".into(),
-            v.flags.clone().to_string().cyan(),
-        ]
-        .into();
-        device_list.push(line);
-    }
-    let network_device_list = List::new(device_list)
-        .block(Block::bordered().title("Network Devices").border_style(
-            if app.monitor_page_selecting_area == MonitorPageArea::Area_1 {
-                let style = Style::default().bold();
-                if app.monitor_page_selected_area == MonitorPageArea::Area_1 {
-                    style.green()
-                } else {
-                    style
-                }
-            } else {
-                let style = Style::default().bold();
-                if app.monitor_page_selected_area == MonitorPageArea::Area_1 {
-                    style.green()
-                } else {
-                    style.gray()
-                }
-            },
-        ))
-        .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
-        .highlight_symbol(">>")
-        .repeat_highlight_symbol(true);
-    // real-time network pack list
-    // build row
-    let mut rows: Vec<Row> = vec![];
-    for (i, v) in app
-        .monitor_page_real_time_net_pack_table_data
-        .iter()
-        .enumerate()
-    {
-        rows.push(Row::new(vec![
-            v.get("k1").unwrap().to_string(),
-            v.get("k2").unwrap().to_string(),
-            v.get("k3").unwrap().to_string(),
-        ]))
-    }
-    // table width
-    let widths = [
-        Constraint::Percentage(25),
-        Constraint::Percentage(25),
-        Constraint::Percentage(50),
-    ];
-    // table header
-    let header = ["Name", "Address", "Email"]
-        .into_iter()
-        .map(Cell::from)
-        .collect::<Row>()
-        .height(1);
-    let table = Table::new(rows, widths)
-        .header(header)
-        .footer(Row::new(vec!["aaa", "bbb", "ccc"]))
-        .block(Block::bordered().title("Network Packet").border_style(
-            if app.monitor_page_selecting_area == MonitorPageArea::Area_2 {
-                let style = Style::default().bold();
-                if app.monitor_page_selected_area == MonitorPageArea::Area_2 {
-                    style.green()
-                } else {
-                    style
-                }
-            } else {
-                let style = Style::default().bold();
-                if app.monitor_page_selected_area == MonitorPageArea::Area_2 {
-                    style.green()
-                } else {
-                    style.gray()
-                }
-            },
-        ))
-        .highlight_style(Style::new().reversed())
-        .highlight_symbol(">>");
-
     let full_layout_1_split = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(vec![Constraint::Percentage(30), Constraint::Percentage(70)])
         .split(full_layout[1]);
-    frame.render_widget(network_device_list, full_layout_1_split[0]);
-
-    frame.render_stateful_widget(
-        table,
-        full_layout_1_split[1],
-        &mut app.monitor_page_real_time_net_pack_table_state,
-    );
+    // render net device list area
+    render_network_device_table_area(app, frame, full_layout_1_split[0]);
+    // render real time net pack area
+    render_real_time_net_pack_area(app, frame, full_layout_1_split[1]);
     // ------------------------ full layout 1 area end ------------------------
     // ------------------------ full layout 2 area start ------------------------
     let full_layout_2_split = Layout::default()
@@ -135,49 +59,28 @@ pub fn layout(app: &mut App, frame: &mut Frame) {
         .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(full_layout[2]);
     // net pack tree info
-    let net_pack_tree_info = Tree::new(&app.monitor_page_net_pack_info_tree_items)
-        .expect("all item identifiers are unique")
-        .block(
-            Block::bordered()
-                .border_style(
-                    if app.monitor_page_selecting_area == MonitorPageArea::Area_3 {
-                        let style = Style::default().bold();
-                        if app.monitor_page_selected_area == MonitorPageArea::Area_3 {
-                            style.green()
-                        } else {
-                            style
-                        }
-                    } else {
-                        let style = Style::default().bold();
-                        if app.monitor_page_selected_area == MonitorPageArea::Area_3 {
-                            style.green()
-                        } else {
-                            style.gray()
-                        }
-                    },
-                )
-                .title("Pack Info"),
-        )
-        .experimental_scrollbar(Some(
-            Scrollbar::new(ScrollbarOrientation::VerticalRight)
-                .begin_symbol(None)
-                .track_symbol(None)
-                .end_symbol(None),
-        ))
-        .highlight_style(
-            Style::new()
-                .fg(Color::Black)
-                .bg(Color::LightGreen)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol(">> ");
-    frame.render_stateful_widget(
-        net_pack_tree_info,
-        full_layout_2_split[0],
-        &mut app.monitor_page_net_pack_info_tree_state,
-    );
+    render_net_pack_tree_info_area(app, frame, full_layout_2_split[0]);
+    // chart hex area
+    render_hex_area(app, frame, full_layout_2_split[1]);
+    // ------------------------ full layout 2 area start ------------------------
+    // ------------------------ input area start ------------------------
+    let text: Vec<Line> = vec![Line::from(app.input_text.to_string())];
+    let create_block = |title| {
+        Block::bordered()
+            .style(Style::default().fg(Color::Gray))
+            .title(Span::styled(
+                title,
+                Style::default().add_modifier(Modifier::BOLD),
+            ))
+    };
+    let paragraph: Paragraph = Paragraph::new(text.clone())
+        .style(Style::default().fg(Color::Gray))
+        .block(create_block("Default alignment (Left), no wrap"));
+    frame.render_widget(paragraph, full_layout[3]);
+    // ------------------------ input area end ------------------------
+}
 
-    // chart
+fn render_hex_area(app: &mut App, frame: &mut Frame, area: Rect) {
     // Create the datasets to fill the chart with
     let datasets = vec![
         // Scatter chart
@@ -241,22 +144,234 @@ pub fn layout(app: &mut App, frame: &mut Frame) {
         )
         .x_axis(x_axis)
         .y_axis(y_axis);
-    frame.render_widget(chart, full_layout_2_split[1]);
-    // ------------------------ full layout 2 area start ------------------------
-    // ------------------------ input area start ------------------------
-    let text: Vec<Line> = vec![Line::from(app.input_text.to_string())];
-    let create_block = |title| {
-        Block::bordered()
-            .style(Style::default().fg(Color::Gray))
-            .title(Span::styled(
-                title,
-                Style::default().add_modifier(Modifier::BOLD),
-            ))
-    };
-    let paragraph: Paragraph = Paragraph::new(text.clone())
-        .style(Style::default().fg(Color::Gray))
-        .block(create_block("Default alignment (Left), no wrap"));
+    frame.render_widget(chart, area);
+}
 
-    frame.render_widget(paragraph, full_layout[3]);
-    // ------------------------ input area end ------------------------
+fn render_tab_area(app: &mut App, frame: &mut Frame, area: Rect) {
+    let tabs = Tabs::new(TABS)
+        .block(Block::bordered().border_style(Style::default().white()))
+        .style(Style::default())
+        .highlight_style(Style::default().yellow())
+        .select(1)
+        .padding("  ", "  ");
+    frame.render_widget(tabs, area);
+}
+
+fn render_net_pack_tree_info_area(app: &mut App, frame: &mut Frame, area: Rect) {
+    let net_pack_tree_info = Tree::new(&app.monitor_page_net_pack_info_tree_items)
+        .expect("all item identifiers are unique")
+        .block(
+            Block::bordered()
+                .border_style(
+                    if app.monitor_page_selecting_area == MonitorPageArea::Area_3 {
+                        let style = Style::default().bold();
+                        if app.monitor_page_selected_area == MonitorPageArea::Area_3 {
+                            style.green()
+                        } else {
+                            style
+                        }
+                    } else {
+                        let style = Style::default().bold();
+                        if app.monitor_page_selected_area == MonitorPageArea::Area_3 {
+                            style.green()
+                        } else {
+                            style.gray()
+                        }
+                    },
+                )
+                .title("Pack Info"),
+        )
+        .experimental_scrollbar(Some(
+            Scrollbar::new(ScrollbarOrientation::VerticalRight)
+                .begin_symbol(None)
+                .track_symbol(None)
+                .end_symbol(None),
+        ))
+        .highlight_style(
+            Style::new()
+                .fg(Color::Black)
+                .bg(Color::LightGreen)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol(">> ");
+    frame.render_stateful_widget(
+        net_pack_tree_info,
+        area,
+        &mut app.monitor_page_net_pack_info_tree_state,
+    );
+}
+
+fn render_real_time_net_pack_area(app: &mut App, frame: &mut Frame, area: Rect) {
+    // build row
+    let mut rows: Vec<Row> = vec![];
+    for (i, v) in app
+        .monitor_page_real_time_net_pack_table_data
+        .iter()
+        .enumerate()
+    {
+        rows.push(
+            Row::new(vec![
+                v.get("k1").unwrap().to_string(),
+                v.get("k2").unwrap().to_string(),
+                v.get("k3").unwrap().to_string(),
+                v.get("k4").unwrap().to_string(),
+                v.get("k5").unwrap().to_string(),
+                v.get("k6").unwrap().to_string(),
+                v.get("k7").unwrap().to_string(),
+            ])
+            .height(REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT.try_into().unwrap()),
+        )
+    }
+    // table width
+    let widths = [
+        Constraint::Percentage(8),
+        Constraint::Percentage(10),
+        Constraint::Percentage(10),
+        Constraint::Percentage(10),
+        Constraint::Percentage(8),
+        Constraint::Percentage(8),
+        Constraint::Percentage(46),
+    ];
+    // table header
+    let header = REAL_TIME_PACK_TABLE_HEADER
+        .into_iter()
+        .map(Cell::from)
+        .collect::<Row>()
+        .height(REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT.try_into().unwrap())
+        .style(Style::default().bg(Color::LightBlue));
+    let table = Table::new(rows, widths)
+        .header(header)
+        .block(
+            Block::bordered()
+                .title(format!(
+                    "Network Packet ({})",
+                    app.monitor_page_real_time_net_pack_table_data.len()
+                ))
+                .border_style(
+                    if app.monitor_page_selecting_area == MonitorPageArea::Area_2 {
+                        let style = Style::default().bold();
+                        if app.monitor_page_selected_area == MonitorPageArea::Area_2 {
+                            style.green()
+                        } else {
+                            style
+                        }
+                    } else {
+                        let style = Style::default().bold();
+                        if app.monitor_page_selected_area == MonitorPageArea::Area_2 {
+                            style.green()
+                        } else {
+                            style.gray()
+                        }
+                    },
+                )
+                .padding(Padding {
+                    left: 0,
+                    right: 1,
+                    top: 0,
+                    bottom: 0,
+                }),
+        )
+        .highlight_style(Style::new().reversed())
+        .highlight_symbol(">>");
+    frame.render_stateful_widget(
+        table,
+        area,
+        &mut app.monitor_page_real_time_net_pack_table_state,
+    );
+    frame.render_stateful_widget(
+        Scrollbar::default()
+            .orientation(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(None)
+            .end_symbol(None),
+        area.inner(Margin {
+            vertical: 1,
+            horizontal: 1,
+        }),
+        &mut app.monitor_page_real_time_net_pack_table_scroll_bar_state,
+    );
+}
+
+fn render_network_device_table_area(app: &mut App, frame: &mut Frame, area: Rect) {
+    // build row
+    let mut rows: Vec<Row> = vec![];
+    for (i, v) in app.monitor_page_device_table_data.iter().enumerate() {
+        rows.push(
+            Row::new(vec![
+                v.name
+                    .clone()
+                    .to_string()
+                    .set_style(Style::default().green()),
+                v.mac
+                    .clone()
+                    .unwrap()
+                    .to_string()
+                    .set_style(Style::default().yellow()),
+                v.flags
+                    .clone()
+                    .to_string()
+                    .set_style(Style::default().cyan()),
+            ])
+            .height(DEVICE_TABLE_ITEM_HEIGHT.try_into().unwrap()),
+        )
+    }
+    // table width
+    let widths = [
+        Constraint::Percentage(10),
+        Constraint::Percentage(80),
+        Constraint::Percentage(10),
+    ];
+    // table header
+    let header = DEVICE_TABLE_HEADER
+        .into_iter()
+        .map(Cell::from)
+        .collect::<Row>()
+        .height(DEVICE_TABLE_ITEM_HEIGHT.try_into().unwrap())
+        .style(Style::default().bg(Color::LightBlue));
+    let table = Table::new(rows, widths)
+        .header(header)
+        .block(
+            Block::bordered()
+                .title(format!(
+                    "Network Packet ({}/{})",
+                    (app.monitor_page_device_table_selected_index.unwrap() + 1),
+                    app.monitor_page_device_table_data.len()
+                ))
+                .border_style(
+                    if app.monitor_page_selecting_area == MonitorPageArea::Area_1 {
+                        let style = Style::default().bold();
+                        if app.monitor_page_selected_area == MonitorPageArea::Area_1 {
+                            style.green()
+                        } else {
+                            style
+                        }
+                    } else {
+                        let style = Style::default().bold();
+                        if app.monitor_page_selected_area == MonitorPageArea::Area_1 {
+                            style.green()
+                        } else {
+                            style.gray()
+                        }
+                    },
+                )
+                .padding(Padding {
+                    left: 0,
+                    right: 1,
+                    top: 0,
+                    bottom: 0,
+                }),
+        )
+        .highlight_style(Style::new().reversed())
+        .highlight_symbol(">>");
+    frame.render_stateful_widget(table, area, &mut app.monitor_page_device_table_state);
+    frame.render_stateful_widget(
+        Scrollbar::default()
+            .orientation(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(None)
+            .end_symbol(None),
+        area.inner(Margin {
+            vertical: 1,
+            horizontal: 1,
+        }),
+        &mut app.monitor_page_device_table_scroll_bar_state,
+    );
 }

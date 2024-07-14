@@ -11,15 +11,28 @@ use ratatui::{
     style::Stylize,
     symbols::border,
     text::{Line, Text},
-    widgets::{block::Title, canvas::Map, Block, Borders, Paragraph, TableState, Widget},
+    widgets::{
+        block::Title, canvas::Map, Block, Borders, Paragraph, ScrollbarState, TableState, Widget,
+    },
     Frame,
 };
+use tokio::join;
 use tui_tree_widget::{TreeItem, TreeState};
 
-use crate::net::device::Device;
-
-use super::ui::{self, config::MonitorPageArea};
-use super::{config::PageIndex, init};
+use super::{
+    config::PageIndex,
+    events::globalevent::handle_global_basic_events,
+    init,
+    ui::monitor::{DEVICE_TABLE_ITEM_HEIGHT, REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT},
+};
+use super::{
+    events::monitorevent::handle_monitor_page_basic_events,
+    ui::{self, config::MonitorPageArea},
+};
+use crate::net::{
+    device::{self, Device},
+    pack::NetPack,
+};
 
 #[derive(Debug)]
 enum InputMode {
@@ -37,13 +50,16 @@ pub struct App {
     // monitor page
     pub monitor_page_selecting_area: MonitorPageArea,
     pub monitor_page_selected_area: MonitorPageArea,
-    pub monitor_page_device_name_list: Vec<String>,
-    pub monitor_page_device_list: Vec<NetworkInterface>,
     pub monitor_page_net_pack_info_tree_state: TreeState<&'static str>,
     pub monitor_page_net_pack_info_tree_items: Vec<TreeItem<'static, &'static str>>,
+    pub monitor_page_device_table_state: TableState,
+    pub monitor_page_device_table_selected_index: Option<usize>,
+    pub monitor_page_device_table_data: Vec<NetworkInterface>,
+    pub monitor_page_device_table_scroll_bar_state: ScrollbarState,
     pub monitor_page_real_time_net_pack_table_state: TableState,
     pub monitor_page_real_time_net_pack_table_selected_index: Option<usize>,
     pub monitor_page_real_time_net_pack_table_data: Vec<HashMap<String, String>>,
+    pub monitor_page_real_time_net_pack_table_scroll_bar_state: ScrollbarState,
 }
 
 impl App {
@@ -52,11 +68,44 @@ impl App {
         m.insert(String::from("k1"), String::from("v1"));
         m.insert(String::from("k2"), String::from("v2"));
         m.insert(String::from("k3"), String::from("v3"));
+        m.insert(String::from("k4"), String::from("v3"));
+        m.insert(String::from("k5"), String::from("v3"));
+        m.insert(String::from("k6"), String::from("v3"));
+        m.insert(String::from("k7"), String::from("v3"));
 
         let mut m2 = HashMap::new();
         m2.insert(String::from("k1"), String::from("vvvvvv1"));
         m2.insert(String::from("k2"), String::from("vvvvvv2"));
         m2.insert(String::from("k3"), String::from("vvvvvv3"));
+        m2.insert(String::from("k4"), String::from("vvvvvv4"));
+        m2.insert(String::from("k5"), String::from("vvvvvv5"));
+        m2.insert(String::from("k6"), String::from("vvvvvqwerqwvv6"));
+        m2.insert(
+            String::from("k7"),
+            String::from("vvvqvqwerqwwerqwerqwervvv7"),
+        );
+        m2.insert(String::from("k8"), String::from("vvvvvvqwerqwvqwvvvvvvqwerqwvqwerqwvqwerqwvqwerqwv8vvvvvvqwerqwvqwerqwvqwerqwvqwerqwv8vvvvvvqwerqwvqwerqwvqwerqwvqwerqwv8erqwvqwerqwvqwerqwv8"));
+
+        let t_data = vec![
+            m.clone(),
+            m2.clone(),
+            m.clone(),
+            m.clone(),
+            m.clone(),
+            m.clone(),
+            m2.clone(),
+            m2.clone(),
+            m.clone(),
+            m.clone(),
+            m2.clone(),
+            m.clone(),
+            m.clone(),
+            m2.clone(),
+            m.clone(),
+            m.clone(),
+        ];
+        let device_name_list = Device::get_device_name_list();
+        let device_list: Vec<NetworkInterface> = Device::get_device_list();
 
         App {
             input_text: String::from(""),
@@ -65,32 +114,12 @@ impl App {
             exit: false,
             monitor_page_selecting_area: MonitorPageArea::Area_1,
             monitor_page_selected_area: MonitorPageArea::None,
-            monitor_page_device_name_list: vec![],
-            monitor_page_device_list: vec![],
-            monitor_page_net_pack_info_tree_state: TreeState::default(),
             monitor_page_real_time_net_pack_table_state: TableState::default(),
             monitor_page_real_time_net_pack_table_selected_index: Some(0),
-            monitor_page_real_time_net_pack_table_data: vec![
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m.clone(),
-                m2.clone(),
-            ],
+            monitor_page_real_time_net_pack_table_scroll_bar_state: ScrollbarState::new(
+                (t_data.len() - 1) * REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT,
+            ),
+            monitor_page_real_time_net_pack_table_data: t_data,
             monitor_page_net_pack_info_tree_items: vec![
                 TreeItem::new_leaf("a", "Alfa"),
                 TreeItem::new(
@@ -149,6 +178,13 @@ impl App {
                 .expect("all item identifiers are unique"),
                 TreeItem::new_leaf("z", "Zulu"),
             ],
+            monitor_page_net_pack_info_tree_state: TreeState::default(),
+            monitor_page_device_table_state: TableState::default(),
+            monitor_page_device_table_selected_index: Some(0),
+            monitor_page_device_table_scroll_bar_state: ScrollbarState::new(
+                (device_list.len() - 1) * DEVICE_TABLE_ITEM_HEIGHT,
+            ),
+            monitor_page_device_table_data: device_list,
         }
     }
 
@@ -166,7 +202,6 @@ impl App {
                 ui::welcome::layout(self, frame);
             }
             PageIndex::Monitor => {
-                self.handle_monitor_page_data();
                 ui::monitor::layout(self, frame);
             }
             PageIndex::Safe => {
@@ -180,18 +215,18 @@ impl App {
 
     fn handle_events(&mut self) -> io::Result<()> {
         match crossterm::event::read()? {
-            Event::Key(key_event) => self.handle_key_event(key_event),
+            Event::Key(mut key_event) => self.handle_key_event(&mut key_event),
             _ => {}
         };
         Ok(())
     }
 
-    fn handle_key_event(&mut self, key_event: KeyEvent) {
-        self.handle_global_basic_events(key_event);
+    fn handle_key_event(&mut self, key_event: &mut KeyEvent) {
+        handle_global_basic_events(self, key_event);
         match self.page_index {
             PageIndex::Welcome => {}
             PageIndex::Monitor => {
-                self.handle_monitor_page_basic_events(key_event);
+                handle_monitor_page_basic_events(self, key_event);
             }
             PageIndex::Safe => {}
             PageIndex::Http => {}
@@ -225,150 +260,7 @@ impl App {
         // }
     }
 
-    fn handle_global_basic_events(&mut self, key_event: KeyEvent) {
-        match key_event.code {
-            KeyCode::Esc => {
-                if (self.page_index == PageIndex::Monitor) {
-                    if self.monitor_page_selected_area != MonitorPageArea::None {
-                        self.monitor_page_net_pack_info_tree_state.close_all();
-                        self.monitor_page_real_time_net_pack_table_state
-                            .select(Some(0));
-                        self.monitor_page_selected_area = MonitorPageArea::None;
-                    } else {
-                        self.exit();
-                    }
-                } else {
-                    self.exit();
-                }
-            }
-            KeyCode::Char('1') => {
-                self.page_index = PageIndex::Welcome;
-            }
-            KeyCode::Char('2') => {
-                self.page_index = PageIndex::Monitor;
-            }
-            KeyCode::Char('3') => {
-                self.page_index = PageIndex::Safe;
-            }
-            KeyCode::Char('4') => {
-                self.page_index = PageIndex::Http;
-            }
-            _ => {}
-        }
-    }
-
-    fn handle_monitor_page_data(&mut self) {
-        if self.monitor_page_device_name_list.is_empty() {
-            self.monitor_page_device_name_list = Device::get_device_name_list();
-        }
-        if self.monitor_page_device_list.is_empty() {
-            self.monitor_page_device_list = Device::get_device_list();
-        }
-    }
-
-    fn handle_monitor_page_basic_events(&mut self, key_event: KeyEvent) {
-        match key_event.code {
-            KeyCode::Enter => {
-                self.monitor_page_selected_area = self.monitor_page_selecting_area;
-                if self.monitor_page_selected_area == MonitorPageArea::Area_2 {
-                    self.monitor_page_real_time_net_pack_table_state
-                        .select(self.monitor_page_real_time_net_pack_table_selected_index);
-                }
-            }
-            KeyCode::Char('\n' | ' ') => {
-                if self.monitor_page_selected_area == MonitorPageArea::Area_3 {
-                    self.monitor_page_net_pack_info_tree_state.toggle_selected();
-                }
-            }
-            KeyCode::Up => {
-                if self.monitor_page_selected_area != MonitorPageArea::Area_3
-                    && self.monitor_page_selected_area != MonitorPageArea::Area_2
-                {
-                    if (self.monitor_page_selecting_area == MonitorPageArea::Area_3) {
-                        self.monitor_page_selecting_area = MonitorPageArea::Area_1;
-                    } else if (self.monitor_page_selecting_area == MonitorPageArea::Area_4) {
-                        self.monitor_page_selecting_area = MonitorPageArea::Area_2;
-                    }
-                }
-                if self.monitor_page_selected_area == MonitorPageArea::Area_3 {
-                    self.monitor_page_net_pack_info_tree_state.key_up();
-                }
-                if self.monitor_page_selected_area == MonitorPageArea::Area_2 {
-                    if self
-                        .monitor_page_real_time_net_pack_table_selected_index
-                        .unwrap()
-                        > 0
-                    {
-                        self.monitor_page_real_time_net_pack_table_selected_index = Some(
-                            self.monitor_page_real_time_net_pack_table_selected_index
-                                .unwrap()
-                                - 1,
-                        );
-                    }
-                    self.monitor_page_real_time_net_pack_table_state
-                        .select(self.monitor_page_real_time_net_pack_table_selected_index);
-                }
-            }
-            KeyCode::Down => {
-                if self.monitor_page_selected_area != MonitorPageArea::Area_3
-                    && self.monitor_page_selected_area != MonitorPageArea::Area_2
-                {
-                    if (self.monitor_page_selecting_area == MonitorPageArea::Area_1) {
-                        self.monitor_page_selecting_area = MonitorPageArea::Area_3;
-                    } else if (self.monitor_page_selecting_area == MonitorPageArea::Area_2) {
-                        self.monitor_page_selecting_area = MonitorPageArea::Area_4;
-                    }
-                }
-                if self.monitor_page_selected_area == MonitorPageArea::Area_3 {
-                    self.monitor_page_net_pack_info_tree_state.key_down();
-                }
-                if self.monitor_page_selected_area == MonitorPageArea::Area_2 {
-                    if self
-                        .monitor_page_real_time_net_pack_table_selected_index
-                        .unwrap()
-                        < self.monitor_page_real_time_net_pack_table_data.len() - 1
-                    {
-                        self.monitor_page_real_time_net_pack_table_selected_index = Some(
-                            self.monitor_page_real_time_net_pack_table_selected_index
-                                .unwrap()
-                                + 1,
-                        );
-                    }
-                    self.monitor_page_real_time_net_pack_table_state
-                        .select(self.monitor_page_real_time_net_pack_table_selected_index);
-                }
-            }
-            KeyCode::Left => {
-                if self.monitor_page_selected_area != MonitorPageArea::Area_3
-                    && self.monitor_page_selected_area != MonitorPageArea::Area_2
-                {
-                    if (self.monitor_page_selecting_area == MonitorPageArea::Area_2) {
-                        self.monitor_page_selecting_area = MonitorPageArea::Area_1;
-                    } else if (self.monitor_page_selecting_area == MonitorPageArea::Area_4) {
-                        self.monitor_page_selecting_area = MonitorPageArea::Area_3;
-                    }
-                }
-                if self.monitor_page_selected_area == MonitorPageArea::Area_3 {
-                    self.monitor_page_net_pack_info_tree_state.key_left();
-                }
-            }
-            KeyCode::Right => {
-                if self.monitor_page_selected_area != MonitorPageArea::Area_3 {
-                    if (self.monitor_page_selecting_area == MonitorPageArea::Area_1) {
-                        self.monitor_page_selecting_area = MonitorPageArea::Area_2;
-                    } else if (self.monitor_page_selecting_area == MonitorPageArea::Area_3) {
-                        self.monitor_page_selecting_area = MonitorPageArea::Area_4;
-                    }
-                }
-                if self.monitor_page_selected_area == MonitorPageArea::Area_3 {
-                    self.monitor_page_net_pack_info_tree_state.key_right();
-                }
-            }
-            _ => {}
-        }
-    }
-
-    fn exit(&mut self) {
+    pub fn exit(&mut self) {
         self.exit = true;
     }
 }
