@@ -47,7 +47,7 @@ impl NetPack {
     }
 
     fn handle_packet(app: &mut App, ethernet: &EthernetPacket) {
-        // 对Ipv4的包按层解析
+        // analyze IPv4 packets by layer
         match ethernet.get_ethertype() {
             EtherTypes::Ipv4 => {
                 let header = Ipv4Packet::new(ethernet.payload());
@@ -66,13 +66,7 @@ impl NetPack {
                                 m.insert("k6".to_string(), tcp.get_destination().to_string());
                                 app.monitor_page_real_time_net_pack_table_data.push(m);
 
-                                // println!(
-                                //     "获取到一个 tcp 数据包 {}:{} to {}:{}",
-                                //     header.get_source(),
-                                //     tcp.get_source(),
-                                //     header.get_destination(),
-                                //     tcp.get_destination()
-                                // );
+                             
                             }
                         }
                         _ => {}
