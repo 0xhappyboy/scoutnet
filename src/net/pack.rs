@@ -93,7 +93,6 @@ impl NetPack {
                                 m.insert("k5".to_string(), "v5".to_string());
                                 m.insert("k6".to_string(), "v5".to_string());
                                 m.insert("k7".to_string(), "v5".to_string());
-
                             }
                         }
                         _ => {}
@@ -103,7 +102,6 @@ impl NetPack {
             _ => {}
         }
 
-        
         return m;
     }
 }

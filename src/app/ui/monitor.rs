@@ -9,8 +9,22 @@ use ratatui::{
 };
 use tui_tree_widget::Tree;
 
-use crate::{app::app::App, data::monitordata::{test_1, test_2, test_3}};
-use crate::data::monitordata;
+use crate::data::{
+    monitordata::{
+        self, monitor_page_device_table_data, monitor_page_device_table_scroll_bar_state,
+        monitor_page_device_table_selected_index, monitor_page_device_table_state,
+        monitor_page_net_pack_info_tree_items, monitor_page_net_pack_info_tree_state,
+        monitor_page_real_time_net_pack_table_data,
+        monitor_page_real_time_net_pack_table_scroll_bar_state,
+        monitor_page_real_time_net_pack_table_state, monitor_page_selected_area,
+        monitor_page_selecting_area,
+    },
+    welcomedata::input_text,
+};
+use crate::{
+    app::app::App,
+    data::monitordata::{test_1, test_2, test_3},
+};
 
 use super::config::{MonitorPageArea, TABS};
 
@@ -30,7 +44,7 @@ const REAL_TIME_PACK_TABLE_HEADER: [&str; 7] = [
 
 const DEVICE_TABLE_HEADER: [&str; 3] = ["Name", "Mac", "Flag"];
 
-pub fn layout(app: &mut App, frame: &mut Frame) {
+pub fn layout(frame: &mut Frame) {
     // full layout
     let full_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -42,7 +56,7 @@ pub fn layout(app: &mut App, frame: &mut Frame) {
         ])
         .split(frame.size());
     // ------------------------ full layout 0 area start ------------------------
-    render_tab_area(app, frame, full_layout[0]);
+    render_tab_area(frame, full_layout[0]);
     // ------------------------ full layout 0 area start ------------------------
     // ------------------------ full layout 1 area start ------------------------
     let full_layout_1_split = Layout::default()
@@ -50,9 +64,9 @@ pub fn layout(app: &mut App, frame: &mut Frame) {
         .constraints(vec![Constraint::Percentage(30), Constraint::Percentage(70)])
         .split(full_layout[1]);
     // render net device list area
-    render_network_device_table_area(app, frame, full_layout_1_split[0]);
+    render_network_device_table_area(frame, full_layout_1_split[0]);
     // render real time net pack area
-    render_real_time_net_pack_area(app, frame, full_layout_1_split[1]);
+    render_real_time_net_pack_area(frame, full_layout_1_split[1]);
     // ------------------------ full layout 1 area end ------------------------
     // ------------------------ full layout 2 area start ------------------------
     let full_layout_2_split = Layout::default()
@@ -60,12 +74,12 @@ pub fn layout(app: &mut App, frame: &mut Frame) {
         .constraints(vec![Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(full_layout[2]);
     // net pack tree info
-    render_net_pack_tree_info_area(app, frame, full_layout_2_split[0]);
+    render_net_pack_tree_info_area(frame, full_layout_2_split[0]);
     // chart hex area
-    render_hex_area(app, frame, full_layout_2_split[1]);
+    render_hex_area(frame, full_layout_2_split[1]);
     // ------------------------ full layout 2 area start ------------------------
     // ------------------------ input area start ------------------------
-    let text: Vec<Line> = vec![Line::from(app.input_text.to_string())];
+    let text: Vec<Line> = vec![Line::from(input_text.lock().unwrap().clone())];
     let create_block = |title| {
         Block::bordered()
             .style(Style::default().fg(Color::Gray))
@@ -81,7 +95,7 @@ pub fn layout(app: &mut App, frame: &mut Frame) {
     // ------------------------ input area end ------------------------
 }
 
-fn render_hex_area(app: &mut App, frame: &mut Frame, area: Rect) {
+fn render_hex_area(frame: &mut Frame, area: Rect) {
     // Create the datasets to fill the chart with
     let datasets = vec![
         // Scatter chart
@@ -126,16 +140,16 @@ fn render_hex_area(app: &mut App, frame: &mut Frame, area: Rect) {
                 })
                 .title("Chart")
                 .border_style(
-                    if app.monitor_page_selecting_area == MonitorPageArea::Area_4 {
+                    if *monitor_page_selecting_area.lock().unwrap() == MonitorPageArea::Area_4 {
                         let style = Style::default().bold();
-                        if app.monitor_page_selected_area == MonitorPageArea::Area_4 {
+                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_4 {
                             style.green()
                         } else {
                             style
                         }
                     } else {
                         let style = Style::default().bold();
-                        if app.monitor_page_selected_area == MonitorPageArea::Area_4 {
+                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_4 {
                             style.green()
                         } else {
                             style.gray()
@@ -148,7 +162,7 @@ fn render_hex_area(app: &mut App, frame: &mut Frame, area: Rect) {
     frame.render_widget(chart, area);
 }
 
-fn render_tab_area(app: &mut App, frame: &mut Frame, area: Rect) {
+fn render_tab_area(frame: &mut Frame, area: Rect) {
     let tabs = Tabs::new(TABS)
         .block(Block::bordered().border_style(Style::default().white()))
         .style(Style::default())
@@ -158,22 +172,23 @@ fn render_tab_area(app: &mut App, frame: &mut Frame, area: Rect) {
     frame.render_widget(tabs, area);
 }
 
-fn render_net_pack_tree_info_area(app: &mut App, frame: &mut Frame, area: Rect) {
-    let net_pack_tree_info = Tree::new(&app.monitor_page_net_pack_info_tree_items)
+fn render_net_pack_tree_info_area(frame: &mut Frame, area: Rect) {
+    let binding = monitor_page_net_pack_info_tree_items.lock().unwrap();
+    let net_pack_tree_info = Tree::new(&binding)
         .expect("all item identifiers are unique")
         .block(
             Block::bordered()
                 .border_style(
-                    if app.monitor_page_selecting_area == MonitorPageArea::Area_3 {
+                    if *monitor_page_selecting_area.lock().unwrap() == MonitorPageArea::Area_3 {
                         let style = Style::default().bold();
-                        if app.monitor_page_selected_area == MonitorPageArea::Area_3 {
+                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_3 {
                             style.green()
                         } else {
                             style
                         }
                     } else {
                         let style = Style::default().bold();
-                        if app.monitor_page_selected_area == MonitorPageArea::Area_3 {
+                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_3 {
                             style.green()
                         } else {
                             style.gray()
@@ -198,15 +213,16 @@ fn render_net_pack_tree_info_area(app: &mut App, frame: &mut Frame, area: Rect) 
     frame.render_stateful_widget(
         net_pack_tree_info,
         area,
-        &mut app.monitor_page_net_pack_info_tree_state,
+        &mut monitor_page_net_pack_info_tree_state.lock().unwrap(),
     );
 }
 
-fn render_real_time_net_pack_area(app: &mut App, frame: &mut Frame, area: Rect) {
+fn render_real_time_net_pack_area(frame: &mut Frame, area: Rect) {
     // build row
     let mut rows: Vec<Row> = vec![];
-    for (i, v) in app
-        .monitor_page_real_time_net_pack_table_data
+    for (i, v) in monitor_page_real_time_net_pack_table_data
+        .lock()
+        .unwrap()
         .iter()
         .enumerate()
     {
@@ -251,16 +267,16 @@ fn render_real_time_net_pack_area(app: &mut App, frame: &mut Frame, area: Rect) 
                     test_3.lock().unwrap()
                 ))
                 .border_style(
-                    if app.monitor_page_selecting_area == MonitorPageArea::Area_2 {
+                    if *monitor_page_selecting_area.lock().unwrap() == MonitorPageArea::Area_2 {
                         let style = Style::default().bold();
-                        if app.monitor_page_selected_area == MonitorPageArea::Area_2 {
+                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_2 {
                             style.green()
                         } else {
                             style
                         }
                     } else {
                         let style = Style::default().bold();
-                        if app.monitor_page_selected_area == MonitorPageArea::Area_2 {
+                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_2 {
                             style.green()
                         } else {
                             style.gray()
@@ -279,7 +295,7 @@ fn render_real_time_net_pack_area(app: &mut App, frame: &mut Frame, area: Rect) 
     frame.render_stateful_widget(
         table,
         area,
-        &mut app.monitor_page_real_time_net_pack_table_state,
+        &mut monitor_page_real_time_net_pack_table_state.lock().unwrap(),
     );
     frame.render_stateful_widget(
         Scrollbar::default()
@@ -290,14 +306,21 @@ fn render_real_time_net_pack_area(app: &mut App, frame: &mut Frame, area: Rect) 
             vertical: 1,
             horizontal: 1,
         }),
-        &mut app.monitor_page_real_time_net_pack_table_scroll_bar_state,
+        &mut monitor_page_real_time_net_pack_table_scroll_bar_state
+            .lock()
+            .unwrap(),
     );
 }
 
-fn render_network_device_table_area(app: &mut App, frame: &mut Frame, area: Rect) {
+fn render_network_device_table_area(frame: &mut Frame, area: Rect) {
     // build row
     let mut rows: Vec<Row> = vec![];
-    for (i, v) in app.monitor_page_device_table_data.iter().enumerate() {
+    for (i, v) in monitor_page_device_table_data
+        .lock()
+        .unwrap()
+        .iter()
+        .enumerate()
+    {
         rows.push(
             Row::new(vec![
                 v.name
@@ -336,20 +359,24 @@ fn render_network_device_table_area(app: &mut App, frame: &mut Frame, area: Rect
             Block::bordered()
                 .title(format!(
                     "Network Packet ({}/{})",
-                    (app.monitor_page_device_table_selected_index.unwrap() + 1),
-                    app.monitor_page_device_table_data.len()
+                    (monitor_page_device_table_selected_index
+                        .lock()
+                        .unwrap()
+                        .unwrap()
+                        + 1),
+                    monitor_page_device_table_data.lock().unwrap().len()
                 ))
                 .border_style(
-                    if app.monitor_page_selecting_area == MonitorPageArea::Area_1 {
+                    if *monitor_page_selecting_area.lock().unwrap() == MonitorPageArea::Area_1 {
                         let style = Style::default().bold();
-                        if app.monitor_page_selected_area == MonitorPageArea::Area_1 {
+                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_1 {
                             style.green()
                         } else {
                             style
                         }
                     } else {
                         let style = Style::default().bold();
-                        if app.monitor_page_selected_area == MonitorPageArea::Area_1 {
+                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_1 {
                             style.green()
                         } else {
                             style.gray()
@@ -365,7 +392,11 @@ fn render_network_device_table_area(app: &mut App, frame: &mut Frame, area: Rect
         )
         .highlight_style(Style::new().reversed())
         .highlight_symbol(">>");
-    frame.render_stateful_widget(table, area, &mut app.monitor_page_device_table_state);
+    frame.render_stateful_widget(
+        table,
+        area,
+        &mut monitor_page_device_table_state.lock().unwrap(),
+    );
     frame.render_stateful_widget(
         Scrollbar::default()
             .orientation(ScrollbarOrientation::VerticalRight)
@@ -375,6 +406,6 @@ fn render_network_device_table_area(app: &mut App, frame: &mut Frame, area: Rect
             vertical: 1,
             horizontal: 1,
         }),
-        &mut app.monitor_page_device_table_scroll_bar_state,
+        &mut monitor_page_device_table_scroll_bar_state.lock().unwrap(),
     );
 }

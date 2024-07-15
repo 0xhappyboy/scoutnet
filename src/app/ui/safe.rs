@@ -10,11 +10,11 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::app::App;
+use crate::{app::app::App, data::welcomedata::input_text};
 
 use super::config::TABS;
 
-pub fn layout(app: &App, frame: &mut Frame) {
+pub fn layout(frame: &mut Frame) {
     // full layout
     let full_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -102,7 +102,7 @@ pub fn layout(app: &App, frame: &mut Frame) {
     frame.render_widget(flow, full_layout_2_split[1]);
     // ------------------------ full layout 2 area start ------------------------
     // ------------------------ input area start ------------------------
-    let text: Vec<Line> = vec![Line::from(app.input_text.to_string())];
+    let text: Vec<Line> = vec![Line::from(input_text.lock().unwrap().to_string())];
     let create_block = |title| {
         Block::bordered()
             .style(Style::default().fg(Color::Gray))
