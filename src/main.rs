@@ -4,10 +4,13 @@ use app::{app::App, init};
 
 mod app;
 mod net;
+mod task;
+mod data;
 
-fn main() -> io::Result<()> {
+#[tokio::main]
+async fn main() -> io::Result<()> {
     let mut terminal = init::init()?;
-    let app_result = App::new().run(&mut terminal);
+    let app_result = App::new().run(&mut terminal).await;
     init::restore()?;
     app_result?;
     Ok(())

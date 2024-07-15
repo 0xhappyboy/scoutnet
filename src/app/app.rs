@@ -1,37 +1,42 @@
-use std::{collections::HashMap, io};
+use std::{
+    collections::HashMap,
+    io::{self, Stdout},
+    thread,
+    time::Duration,
+};
 
 use pnet::datalink::NetworkInterface;
 use ratatui::{
-    buffer::Buffer,
+    backend::CrosstermBackend,
     crossterm::{
         self,
-        event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEventKind},
+        event::{self, Event, KeyEvent},
     },
-    layout::{Alignment, Layout, Rect},
-    style::Stylize,
-    symbols::border,
-    text::{Line, Text},
-    widgets::{
-        block::Title, canvas::Map, Block, Borders, Paragraph, ScrollbarState, TableState, Widget,
-    },
-    Frame,
+    widgets::{ScrollbarState, TableState},
+    Frame, Terminal,
 };
-use tokio::join;
+use tokio::{
+    join,
+    sync::mpsc::{self, Receiver, Sender},
+};
 use tui_tree_widget::{TreeItem, TreeState};
 
 use super::{
     config::PageIndex,
     events::globalevent::handle_global_basic_events,
-    init,
+    init::{self, Tui},
     ui::monitor::{DEVICE_TABLE_ITEM_HEIGHT, REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT},
 };
 use super::{
     events::monitorevent::handle_monitor_page_basic_events,
     ui::{self, config::MonitorPageArea},
 };
-use crate::net::{
-    device::{self, Device},
-    pack::NetPack,
+use crate::{
+    net::{
+        device::{self, Device},
+        pack::NetPack,
+    },
+    task::monitortask::{test1, test2, test3},
 };
 
 #[derive(Debug)]
@@ -60,10 +65,16 @@ pub struct App {
     pub monitor_page_real_time_net_pack_table_selected_index: Option<usize>,
     pub monitor_page_real_time_net_pack_table_data: Vec<HashMap<String, String>>,
     pub monitor_page_real_time_net_pack_table_scroll_bar_state: ScrollbarState,
+    // test
+    pub test1: u64,
+    pub t_tx: Sender<HashMap<String, String>>,
+    pub t_rx: Receiver<HashMap<String, String>>,
 }
 
 impl App {
     pub fn new() -> Self {
+        let (mut tx, mut rx) = mpsc::channel::<HashMap<String, String>>(32);
+
         let mut m = HashMap::new();
         m.insert(String::from("k1"), String::from("v1"));
         m.insert(String::from("k2"), String::from("v2"));
@@ -86,24 +97,7 @@ impl App {
         );
         m2.insert(String::from("k8"), String::from("vvvvvvqwerqwvqwvvvvvvqwerqwvqwerqwvqwerqwvqwerqwv8vvvvvvqwerqwvqwerqwvqwerqwvqwerqwv8vvvvvvqwerqwvqwerqwvqwerqwvqwerqwv8erqwvqwerqwvqwerqwv8"));
 
-        let t_data = vec![
-            m.clone(),
-            m2.clone(),
-            m.clone(),
-            m.clone(),
-            m.clone(),
-            m.clone(),
-            m2.clone(),
-            m2.clone(),
-            m.clone(),
-            m.clone(),
-            m2.clone(),
-            m.clone(),
-            m.clone(),
-            m2.clone(),
-            m.clone(),
-            m.clone(),
-        ];
+        let t_data: Vec<HashMap<String, String>> = vec![m.clone(), m2.clone()];
         let device_name_list = Device::get_device_name_list();
         let device_list: Vec<NetworkInterface> = Device::get_device_list();
 
@@ -185,13 +179,20 @@ impl App {
                 (device_list.len() - 1) * DEVICE_TABLE_ITEM_HEIGHT,
             ),
             monitor_page_device_table_data: device_list,
+            test1: 1,
+            t_tx: tx,
+            t_rx: rx,
         }
     }
 
-    pub fn run(&mut self, terminal: &mut init::Tui) -> io::Result<()> {
+    pub async fn run(&mut self, terminal: &mut init::Tui) -> io::Result<()> {
+        tokio::spawn(test1());
+        tokio::spawn(test2());
+        tokio::spawn(test3());
+
         while !self.exit {
             terminal.draw(|frame| self.render_frame(frame))?;
-            self.handle_events()?;
+            let _ = self.handle_events();
         }
         Ok(())
     }
@@ -214,9 +215,9 @@ impl App {
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
-        match crossterm::event::read()? {
+        match event::read().unwrap() {
             Event::Key(mut key_event) => self.handle_key_event(&mut key_event),
-            _ => {}
+            _ => return Ok(()),
         };
         Ok(())
     }

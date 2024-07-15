@@ -9,7 +9,8 @@ use ratatui::{
 };
 use tui_tree_widget::Tree;
 
-use crate::app::app::App;
+use crate::{app::app::App, data::monitordata::{test_1, test_2, test_3}};
+use crate::data::monitordata;
 
 use super::config::{MonitorPageArea, TABS};
 
@@ -244,8 +245,10 @@ fn render_real_time_net_pack_area(app: &mut App, frame: &mut Frame, area: Rect) 
         .block(
             Block::bordered()
                 .title(format!(
-                    "Network Packet ({})",
-                    app.monitor_page_real_time_net_pack_table_data.len()
+                    "Network Packet ({} - {} - {})",
+                    test_1.lock().unwrap(),
+                    test_2.lock().unwrap(),
+                    test_3.lock().unwrap()
                 ))
                 .border_style(
                     if app.monitor_page_selecting_area == MonitorPageArea::Area_2 {

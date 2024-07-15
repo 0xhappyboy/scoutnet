@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::thread;
+use std::time::Duration;
 
 use crate::app;
 use crate::app::app::App;
@@ -9,13 +11,29 @@ use pnet::packet::ip::IpNextHeaderProtocols;
 use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::tcp::TcpPacket;
 use pnet::packet::Packet;
+use tokio::sync::mpsc::Sender;
 
 use super::device;
 
 pub struct NetPack {}
 
 impl NetPack {
-    pub async fn listen(device_name: String, app: &mut App) {
+    pub async fn t(mut sender: Sender<HashMap<String, String>>) {
+        loop {
+            thread::sleep(Duration::from_millis(3000));
+            let mut m: HashMap<String, String> = HashMap::new();
+            m.insert("k1".to_string(), "v1".to_string());
+            m.insert("k2".to_string(), "v2".to_string());
+            m.insert("k3".to_string(), "v3".to_string());
+            m.insert("k4".to_string(), "v4".to_string());
+            m.insert("k5".to_string(), "v5".to_string());
+            m.insert("k6".to_string(), "v5".to_string());
+            m.insert("k7".to_string(), "v5".to_string());
+            sender.send(m).await.unwrap();
+        }
+    }
+
+    pub async fn listen(mut sender: Sender<HashMap<String, String>>, device_name: String) {
         // get net device list
         let interfaces = datalink::interfaces();
         let interface = interfaces
@@ -37,7 +55,8 @@ impl NetPack {
             match rx.next() {
                 Ok(packet) => {
                     let packet = EthernetPacket::new(packet).unwrap();
-                    Self::handle_packet(app, &packet);
+                    let m = Self::handle_packet(&packet);
+                    sender.send(m).await.unwrap();
                 }
                 Err(e) => {
                     panic!("An error occurred while reading: {}", e);
@@ -46,7 +65,8 @@ impl NetPack {
         }
     }
 
-    fn handle_packet(app: &mut App, ethernet: &EthernetPacket) {
+    fn handle_packet(ethernet: &EthernetPacket) -> HashMap<String, String> {
+        let mut m: HashMap<String, String> = HashMap::new();
         // analyze IPv4 packets by layer
         match ethernet.get_ethertype() {
             EtherTypes::Ipv4 => {
@@ -56,17 +76,24 @@ impl NetPack {
                         IpNextHeaderProtocols::Tcp => {
                             let tcp = TcpPacket::new(header.payload());
                             if let Some(tcp) = tcp {
-                                let mut m: HashMap<String, String> = HashMap::new();
-                                m.insert("k1".to_string(), header.get_source().to_string());
-                                m.insert("k2".to_string(), tcp.get_source().to_string());
-                                m.insert("k3".to_string(), header.get_destination().to_string());
-                                m.insert("k4".to_string(), tcp.get_destination().to_string());
-                                m.insert("k5".to_string(), tcp.get_destination().to_string());
-                                m.insert("k6".to_string(), tcp.get_destination().to_string());
-                                m.insert("k6".to_string(), tcp.get_destination().to_string());
-                                app.monitor_page_real_time_net_pack_table_data.push(m);
+                                // m.insert("k1".to_string(), header.get_source().to_string());
+                                // m.insert("k2".to_string(), tcp.get_source().to_string());
+                                // m.insert("k3".to_string(), header.get_destination().to_string());
+                                // m.insert("k4".to_string(), tcp.get_destination().to_string());
+                                // m.insert("k5".to_string(), tcp.get_destination().to_string());
+                                // m.insert("k6".to_string(), tcp.get_destination().to_string());
+                                // m.insert("k6".to_string(), tcp.get_destination().to_string());
+                                // tx.send(m).await.unwrap();
+                                // app.monitor_page_real_time_net_pack_table_data.push(m);
 
-                             
+                                m.insert("k1".to_string(), "v1".to_string());
+                                m.insert("k2".to_string(), "v2".to_string());
+                                m.insert("k3".to_string(), "v3".to_string());
+                                m.insert("k4".to_string(), "v4".to_string());
+                                m.insert("k5".to_string(), "v5".to_string());
+                                m.insert("k6".to_string(), "v5".to_string());
+                                m.insert("k7".to_string(), "v5".to_string());
+
                             }
                         }
                         _ => {}
@@ -75,5 +102,8 @@ impl NetPack {
             }
             _ => {}
         }
+
+        
+        return m;
     }
 }
