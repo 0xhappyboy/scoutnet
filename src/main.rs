@@ -3,9 +3,9 @@ use std::io;
 use app::{app::App, init};
 
 mod app;
+mod data;
 mod net;
 mod task;
-mod data;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {

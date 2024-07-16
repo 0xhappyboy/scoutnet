@@ -9,22 +9,7 @@ use ratatui::{
 };
 use tui_tree_widget::Tree;
 
-use crate::data::{
-    monitordata::{
-        self, monitor_page_device_table_data, monitor_page_device_table_scroll_bar_state,
-        monitor_page_device_table_selected_index, monitor_page_device_table_state,
-        monitor_page_net_pack_info_tree_items, monitor_page_net_pack_info_tree_state,
-        monitor_page_real_time_net_pack_table_data,
-        monitor_page_real_time_net_pack_table_scroll_bar_state,
-        monitor_page_real_time_net_pack_table_state, monitor_page_selected_area,
-        monitor_page_selecting_area,
-    },
-    welcomedata::input_text,
-};
-use crate::{
-    app::app::App,
-    data::monitordata::{test_1, test_2, test_3},
-};
+use crate::data::{monitordata::*, welcomedata::input_text};
 
 use super::config::{MonitorPageArea, TABS};
 
@@ -140,16 +125,16 @@ fn render_hex_area(frame: &mut Frame, area: Rect) {
                 })
                 .title("Chart")
                 .border_style(
-                    if *monitor_page_selecting_area.lock().unwrap() == MonitorPageArea::Area_4 {
+                    if *selecting_area.lock().unwrap() == MonitorPageArea::Area_4 {
                         let style = Style::default().bold();
-                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_4 {
+                        if *selected_area.lock().unwrap() == MonitorPageArea::Area_4 {
                             style.green()
                         } else {
                             style
                         }
                     } else {
                         let style = Style::default().bold();
-                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_4 {
+                        if *selected_area.lock().unwrap() == MonitorPageArea::Area_4 {
                             style.green()
                         } else {
                             style.gray()
@@ -173,22 +158,22 @@ fn render_tab_area(frame: &mut Frame, area: Rect) {
 }
 
 fn render_net_pack_tree_info_area(frame: &mut Frame, area: Rect) {
-    let binding = monitor_page_net_pack_info_tree_items.lock().unwrap();
+    let binding = net_pack_info_tree_items.lock().unwrap();
     let net_pack_tree_info = Tree::new(&binding)
         .expect("all item identifiers are unique")
         .block(
             Block::bordered()
                 .border_style(
-                    if *monitor_page_selecting_area.lock().unwrap() == MonitorPageArea::Area_3 {
+                    if *selecting_area.lock().unwrap() == MonitorPageArea::Area_3 {
                         let style = Style::default().bold();
-                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_3 {
+                        if *selected_area.lock().unwrap() == MonitorPageArea::Area_3 {
                             style.green()
                         } else {
                             style
                         }
                     } else {
                         let style = Style::default().bold();
-                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_3 {
+                        if *selected_area.lock().unwrap() == MonitorPageArea::Area_3 {
                             style.green()
                         } else {
                             style.gray()
@@ -213,14 +198,14 @@ fn render_net_pack_tree_info_area(frame: &mut Frame, area: Rect) {
     frame.render_stateful_widget(
         net_pack_tree_info,
         area,
-        &mut monitor_page_net_pack_info_tree_state.lock().unwrap(),
+        &mut net_pack_info_tree_state.lock().unwrap(),
     );
 }
 
 fn render_real_time_net_pack_area(frame: &mut Frame, area: Rect) {
     // build row
     let mut rows: Vec<Row> = vec![];
-    for (i, v) in monitor_page_real_time_net_pack_table_data
+    for (i, v) in real_time_net_pack_table_data
         .lock()
         .unwrap()
         .iter()
@@ -260,23 +245,18 @@ fn render_real_time_net_pack_area(frame: &mut Frame, area: Rect) {
         .header(header)
         .block(
             Block::bordered()
-                .title(format!(
-                    "Network Packet ({} - {} - {})",
-                    test_1.lock().unwrap(),
-                    test_2.lock().unwrap(),
-                    test_3.lock().unwrap()
-                ))
+                .title(format!("Network Packet ({} - {} - {})", 1, 2, 3))
                 .border_style(
-                    if *monitor_page_selecting_area.lock().unwrap() == MonitorPageArea::Area_2 {
+                    if *selecting_area.lock().unwrap() == MonitorPageArea::Area_2 {
                         let style = Style::default().bold();
-                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_2 {
+                        if *selected_area.lock().unwrap() == MonitorPageArea::Area_2 {
                             style.green()
                         } else {
                             style
                         }
                     } else {
                         let style = Style::default().bold();
-                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_2 {
+                        if *selected_area.lock().unwrap() == MonitorPageArea::Area_2 {
                             style.green()
                         } else {
                             style.gray()
@@ -295,7 +275,7 @@ fn render_real_time_net_pack_area(frame: &mut Frame, area: Rect) {
     frame.render_stateful_widget(
         table,
         area,
-        &mut monitor_page_real_time_net_pack_table_state.lock().unwrap(),
+        &mut real_time_net_pack_table_state.lock().unwrap(),
     );
     frame.render_stateful_widget(
         Scrollbar::default()
@@ -306,21 +286,14 @@ fn render_real_time_net_pack_area(frame: &mut Frame, area: Rect) {
             vertical: 1,
             horizontal: 1,
         }),
-        &mut monitor_page_real_time_net_pack_table_scroll_bar_state
-            .lock()
-            .unwrap(),
+        &mut real_time_net_pack_table_scroll_bar_state.lock().unwrap(),
     );
 }
 
 fn render_network_device_table_area(frame: &mut Frame, area: Rect) {
     // build row
     let mut rows: Vec<Row> = vec![];
-    for (i, v) in monitor_page_device_table_data
-        .lock()
-        .unwrap()
-        .iter()
-        .enumerate()
-    {
+    for (i, v) in device_table_data.lock().unwrap().iter().enumerate() {
         rows.push(
             Row::new(vec![
                 v.name
@@ -359,24 +332,20 @@ fn render_network_device_table_area(frame: &mut Frame, area: Rect) {
             Block::bordered()
                 .title(format!(
                     "Network Packet ({}/{})",
-                    (monitor_page_device_table_selected_index
-                        .lock()
-                        .unwrap()
-                        .unwrap()
-                        + 1),
-                    monitor_page_device_table_data.lock().unwrap().len()
+                    (device_table_selected_index.lock().unwrap().unwrap() + 1),
+                    device_table_data.lock().unwrap().len()
                 ))
                 .border_style(
-                    if *monitor_page_selecting_area.lock().unwrap() == MonitorPageArea::Area_1 {
+                    if *selecting_area.lock().unwrap() == MonitorPageArea::Area_1 {
                         let style = Style::default().bold();
-                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_1 {
+                        if *selected_area.lock().unwrap() == MonitorPageArea::Area_1 {
                             style.green()
                         } else {
                             style
                         }
                     } else {
                         let style = Style::default().bold();
-                        if *monitor_page_selected_area.lock().unwrap() == MonitorPageArea::Area_1 {
+                        if *selected_area.lock().unwrap() == MonitorPageArea::Area_1 {
                             style.green()
                         } else {
                             style.gray()
@@ -392,11 +361,7 @@ fn render_network_device_table_area(frame: &mut Frame, area: Rect) {
         )
         .highlight_style(Style::new().reversed())
         .highlight_symbol(">>");
-    frame.render_stateful_widget(
-        table,
-        area,
-        &mut monitor_page_device_table_state.lock().unwrap(),
-    );
+    frame.render_stateful_widget(table, area, &mut device_table_state.lock().unwrap());
     frame.render_stateful_widget(
         Scrollbar::default()
             .orientation(ScrollbarOrientation::VerticalRight)
@@ -406,6 +371,6 @@ fn render_network_device_table_area(frame: &mut Frame, area: Rect) {
             vertical: 1,
             horizontal: 1,
         }),
-        &mut monitor_page_device_table_scroll_bar_state.lock().unwrap(),
+        &mut device_table_scroll_bar_state.lock().unwrap(),
     );
 }

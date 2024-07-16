@@ -10,10 +10,7 @@ use ratatui::{
 };
 use tui_tree_widget::{Tree, TreeItem};
 
-use crate::{
-    app::app::{self, App},
-    data::welcomedata::input_text,
-};
+use crate::data::welcomedata::input_text;
 
 use super::config::TABS;
 

@@ -2,16 +2,12 @@
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style, Stylize},
-    symbols,
     text::{Line, Span},
-    widgets::{
-        Block, Borders, List, ListState, Paragraph, RenderDirection, Row, Sparkline, Table, Tabs,
-    },
+    widgets::{Block, List, ListState, Paragraph, RenderDirection, Row, Sparkline, Table, Tabs},
     Frame,
 };
 
-use crate::app::ui::config;
-use crate::{app::app::App, data::welcomedata::input_text};
+use crate::data::welcomedata::input_text;
 
 use super::config::TABS;
 

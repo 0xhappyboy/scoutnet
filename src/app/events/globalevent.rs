@@ -5,8 +5,8 @@ use crate::{
     data::{
         appdata::page_index,
         monitordata::{
-            monitor_page_net_pack_info_tree_state, monitor_page_real_time_net_pack_table_data,
-            monitor_page_real_time_net_pack_table_state, monitor_page_selected_area,
+            net_pack_info_tree_state, real_time_net_pack_table_data,
+            real_time_net_pack_table_state, selected_area,
         },
     },
 };
@@ -15,22 +15,12 @@ pub fn handle_global_basic_events(key_event: &mut KeyEvent) {
     match key_event.code {
         KeyCode::Esc => {
             if *page_index.lock().unwrap() == PageIndex::Monitor {
-                if *monitor_page_selected_area.lock().unwrap() != MonitorPageArea::None {
-                    monitor_page_net_pack_info_tree_state
-                        .lock()
-                        .unwrap()
-                        .close_all();
-                    monitor_page_real_time_net_pack_table_state
-                        .lock()
-                        .unwrap()
-                        .select(Some(
-                            monitor_page_real_time_net_pack_table_data
-                                .lock()
-                                .unwrap()
-                                .len()
-                                - 1,
-                        ));
-                    *monitor_page_selected_area.lock().unwrap() = MonitorPageArea::None;
+                if *selected_area.lock().unwrap() != MonitorPageArea::None {
+                    net_pack_info_tree_state.lock().unwrap().close_all();
+                    real_time_net_pack_table_state.lock().unwrap().select(Some(
+                        real_time_net_pack_table_data.lock().unwrap().len() - 1,
+                    ));
+                    *selected_area.lock().unwrap() = MonitorPageArea::None;
                 } else {
                     App::exit();
                 }

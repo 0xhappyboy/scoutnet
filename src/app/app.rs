@@ -10,7 +10,6 @@ use ratatui::{
     crossterm::event::{self, Event, KeyEvent},
     Frame,
 };
-use tokio::sync::mpsc::{self, Receiver, Sender};
 
 use super::{
     config::PageIndex,
@@ -21,15 +20,15 @@ use super::{
     events::monitorevent::handle_monitor_page_basic_events,
     ui::{self},
 };
+use crate::data::monitordata::real_time_net_pack_table_data;
 use crate::{
     data::{
         appdata::{exit, page_index},
-        monitordata::monitor_page_device_table_data,
+        monitordata::device_table_data,
     },
-    net::device::Device,
-    task::monitortask::{test1, test2, test3},
+    net::{device::Device, pack::NetPack},
+    task::monitortask::get_real_time_net_pack,
 };
-
 #[derive(Debug)]
 enum InputMode {
     Normal,
@@ -40,35 +39,23 @@ enum InputMode {
 pub struct App {
     // app
     pub input_mode: InputMode,
-    exit: bool,
     // monitor page
-    // test
-    pub test1: u64,
-    pub t_tx: Sender<HashMap<String, String>>,
-    pub t_rx: Receiver<HashMap<String, String>>,
 }
 
 impl App {
     pub fn new() -> Self {
-        let (mut tx, mut rx) = mpsc::channel::<HashMap<String, String>>(32);
-
         let device_name_list = Device::get_device_name_list();
         let device_list: Vec<NetworkInterface> = Device::get_device_list();
-        *monitor_page_device_table_data.lock().unwrap() = device_list;
-
+        *device_table_data.lock().unwrap() = device_list;
         App {
             input_mode: InputMode::Normal,
-            exit: false,
-            test1: 1,
-            t_tx: tx,
-            t_rx: rx,
         }
     }
 
     pub async fn run(&mut self, terminal: &mut init::Tui) -> io::Result<()> {
-        tokio::spawn(test1());
-        tokio::spawn(test2());
-        tokio::spawn(test3());
+        tokio::spawn(async {
+            NetPack::listen("en0".to_string()).await;
+        });
         tokio::spawn(async {
             while !*exit.lock().unwrap() {
                 let _ = App::handle_events();
@@ -115,7 +102,6 @@ impl App {
             PageIndex::Safe => {}
             PageIndex::Http => {}
         }
-
         // match self.input_mode {
         //     InputMode::Normal => match key_event.code {
         //         KeyCode::Char('e') => self.input_mode = InputMode::Editing,

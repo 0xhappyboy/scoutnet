@@ -10,16 +10,16 @@ use crate::app::ui::{
     monitor::{DEVICE_TABLE_ITEM_HEIGHT, REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT},
 };
 lazy_static! {
-    pub static ref test_1: Mutex<u64> = Mutex::new(1);
-    pub static ref test_2: Mutex<u64> = Mutex::new(2);
-    pub static ref test_3: Mutex<u64> = Mutex::new(3);
-    pub static ref monitor_page_selected_area: Mutex<MonitorPageArea> =
-        Mutex::new(MonitorPageArea::None);
-    pub static ref monitor_page_selecting_area: Mutex<MonitorPageArea> =
-        Mutex::new(MonitorPageArea::Area_1);
-    pub static ref monitor_page_device_table_state: Mutex<TableState> =
-        Mutex::new(TableState::default());
-    pub static ref monitor_page_net_pack_info_tree_items: Mutex<Vec<TreeItem<'static, &'static str>>> = {
+    // selected area
+    pub static ref selected_area: Mutex<MonitorPageArea> = Mutex::new(MonitorPageArea::None);
+    // selecting area
+    pub static ref selecting_area: Mutex<MonitorPageArea> = Mutex::new(MonitorPageArea::Area_1);
+    // device table state
+    pub static ref device_table_state: Mutex<TableState> = Mutex::new(TableState::default());
+    // current device name
+    pub static ref current_device_name: Mutex<String> =  Mutex::new(String::default());
+    // net pack info tree items
+    pub static ref net_pack_info_tree_items: Mutex<Vec<TreeItem<'static, &'static str>>> = {
         Mutex::new(vec![
             TreeItem::new_leaf("a", "Alfa"),
             TreeItem::new(
@@ -79,55 +79,29 @@ lazy_static! {
             TreeItem::new_leaf("z", "Zulu"),
         ])
     };
-    pub static ref monitor_page_net_pack_info_tree_state: Mutex<TreeState<&'static str>> =
-        Mutex::new(TreeState::default());
-    pub static ref monitor_page_device_table_data: Mutex<Vec<NetworkInterface>> =
-        Mutex::new(vec![]);
-    pub static ref monitor_page_device_table_selected_index: Mutex<Option<usize>> =
-        Mutex::new(Some(0));
-    pub static ref monitor_page_real_time_net_pack_table_selected_index: Mutex<Option<usize>> =
-        Mutex::new(Some(0));
-    pub static ref monitor_page_real_time_net_pack_table_state: Mutex<TableState> =
-        Mutex::new(TableState::default());
-    pub static ref monitor_page_device_table_scroll_bar_state: Mutex<ScrollbarState> = {
-        Mutex::new(ScrollbarState::new(
-            (monitor_page_device_table_data.lock().unwrap().len() - 1) * DEVICE_TABLE_ITEM_HEIGHT,
-        ))
+    // net pack info tree state
+    pub static ref net_pack_info_tree_state: Mutex<TreeState<&'static str>> = Mutex::new(TreeState::default());
+    // device table data
+    pub static ref device_table_data: Mutex<Vec<NetworkInterface>> = Mutex::new(vec![]);
+    pub static ref device_table_selected_index: Mutex<Option<usize>> = Mutex::new(Some(0));
+    pub static ref real_time_net_pack_table_selected_index: Mutex<Option<usize>> = Mutex::new(Some(0));
+    pub static ref real_time_net_pack_table_state: Mutex<TableState> = Mutex::new(TableState::default());
+    pub static ref device_table_scroll_bar_state: Mutex<ScrollbarState> = {
+        Mutex::new(ScrollbarState::new((device_table_data.lock().unwrap().len() - 1) * DEVICE_TABLE_ITEM_HEIGHT,))
     };
-    pub static ref monitor_page_real_time_net_pack_table_scroll_bar_state: Mutex<ScrollbarState> = {
-        Mutex::new(ScrollbarState::new(
-            (monitor_page_real_time_net_pack_table_data
-                .lock()
-                .unwrap()
-                .len()
-                - 1)
-                * REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT,
-        ))
+    // real time net table scroll bar state
+    pub static ref real_time_net_pack_table_scroll_bar_state: Mutex<ScrollbarState> = {
+        Mutex::new(ScrollbarState::new((real_time_net_pack_table_data.lock().unwrap().len() - 1) * REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT,))
     };
-    pub static ref monitor_page_real_time_net_pack_table_data: Mutex<Vec<HashMap<String, String>>> = {
-        let mut m = HashMap::new();
-        m.insert(String::from("k1"), String::from("v1"));
-        m.insert(String::from("k2"), String::from("v2"));
-        m.insert(String::from("k3"), String::from("v3"));
-        m.insert(String::from("k4"), String::from("v3"));
-        m.insert(String::from("k5"), String::from("v3"));
-        m.insert(String::from("k6"), String::from("v3"));
-        m.insert(String::from("k7"), String::from("v3"));
-
-        let mut m2 = HashMap::new();
-        m2.insert(String::from("k1"), String::from("vvvvvv1"));
-        m2.insert(String::from("k2"), String::from("vvvvvv2"));
-        m2.insert(String::from("k3"), String::from("vvvvvv3"));
-        m2.insert(String::from("k4"), String::from("vvvvvv4"));
-        m2.insert(String::from("k5"), String::from("vvvvvv5"));
-        m2.insert(String::from("k6"), String::from("vvvvvqwerqwvv6"));
-        m2.insert(
-            String::from("k7"),
-            String::from("vvvqvqwerqwwerqwerqwervvv7"),
-        );
-        m2.insert(String::from("k8"), String::from("vvvvvvqwerqwvqwvvvvvvqwerqwvqwerqwvqwerqwvqwerqwv8vvvvvvqwerqwvqwerqwvqwerqwvqwerqwv8vvvvvvqwerqwvqwerqwvqwerqwvqwerqwv8erqwvqwerqwvqwerqwv8"));
-
-        let t_data: Vec<HashMap<String, String>> = vec![m.clone(), m2.clone()];
-        Mutex::new(t_data)
+    pub static ref real_time_net_pack_table_data: Mutex<Vec<HashMap<String, String>>> = {
+        let mut m = HashMap::default();
+        m.insert("k1".to_string(), "test1".to_string());
+        m.insert("k2".to_string(), "test2".to_string());
+        m.insert("k3".to_string(), "test3".to_string());
+        m.insert("k4".to_string(), "test4".to_string());
+        m.insert("k5".to_string(), "test5".to_string());
+        m.insert("k6".to_string(), "test6".to_string());
+        m.insert("k7".to_string(), "test7".to_string());
+        Mutex::new(vec![m])
     };
 }
