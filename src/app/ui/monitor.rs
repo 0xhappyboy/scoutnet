@@ -17,13 +17,14 @@ use super::config::{MonitorPageArea, TABS};
 pub const REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT: usize = 1;
 pub const DEVICE_TABLE_ITEM_HEIGHT: usize = 1;
 
-const REAL_TIME_PACK_TABLE_HEADER: [&str; 7] = [
+const REAL_TIME_PACK_TABLE_HEADER: [&str; 8] = [
     "No",
     "Time",
     "Source",
     "Destination",
     "Protocol",
     "Length",
+    "Version",
     "Info",
 ];
 
@@ -213,16 +214,26 @@ fn render_real_time_net_pack_area(frame: &mut Frame, area: Rect) {
     {
         rows.push(
             Row::new(vec![
-                v.get("k1").unwrap().to_string(),
-                v.get("k2").unwrap().to_string(),
-                v.get("k3").unwrap().to_string(),
-                v.get("k4").unwrap().to_string(),
-                v.get("k5").unwrap().to_string(),
-                v.get("k6").unwrap().to_string(),
-                v.get("k7").unwrap().to_string(),
+                "1".to_string(),
+                v.pack_time.clone(),
+                v.pack_source.clone(),
+                v.pack_destination.clone(),
+                v.pack_protocol.clone(),
+                v.pack_length.clone(),
+                v.pack_version.clone(),
+                v.pack_info.clone(),
             ])
             .height(REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT.try_into().unwrap()),
-        )
+        );
+    }
+    if *selected_area.lock().unwrap() != MonitorPageArea::Area_2 {
+        real_time_net_pack_table_state.lock().unwrap().select(Some(
+            real_time_net_pack_table_data.lock().unwrap().len() - 1,
+        ));
+        real_time_net_pack_table_scroll_bar_state
+            .lock()
+            .unwrap()
+            .last();
     }
     // table width
     let widths = [

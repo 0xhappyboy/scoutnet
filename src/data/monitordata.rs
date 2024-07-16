@@ -5,9 +5,12 @@ use pnet::datalink::NetworkInterface;
 use ratatui::widgets::{ScrollbarState, TableState};
 use tui_tree_widget::{TreeItem, TreeState};
 
-use crate::app::ui::{
-    config::MonitorPageArea,
-    monitor::{DEVICE_TABLE_ITEM_HEIGHT, REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT},
+use crate::{
+    app::ui::{
+        config::MonitorPageArea,
+        monitor::{DEVICE_TABLE_ITEM_HEIGHT, REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT},
+    },
+    net::pack::NetPack,
 };
 lazy_static! {
     // selected area
@@ -93,15 +96,8 @@ lazy_static! {
     pub static ref real_time_net_pack_table_scroll_bar_state: Mutex<ScrollbarState> = {
         Mutex::new(ScrollbarState::new((real_time_net_pack_table_data.lock().unwrap().len() - 1) * REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT,))
     };
-    pub static ref real_time_net_pack_table_data: Mutex<Vec<HashMap<String, String>>> = {
-        let mut m = HashMap::default();
-        m.insert("k1".to_string(), "test1".to_string());
-        m.insert("k2".to_string(), "test2".to_string());
-        m.insert("k3".to_string(), "test3".to_string());
-        m.insert("k4".to_string(), "test4".to_string());
-        m.insert("k5".to_string(), "test5".to_string());
-        m.insert("k6".to_string(), "test6".to_string());
-        m.insert("k7".to_string(), "test7".to_string());
-        Mutex::new(vec![m])
+    pub static ref real_time_net_pack_table_data: Mutex<Vec<NetPack>> = {
+        Mutex::new(vec![NetPack::default()])
     };
+    pub static ref real_time_net_pack_table_data_no: Mutex<u128> = Mutex::new(1);
 }
