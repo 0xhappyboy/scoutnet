@@ -227,6 +227,8 @@ fn render_real_time_net_pack_area(frame: &mut Frame, area: Rect) {
         );
     }
     if *selected_area.lock().unwrap() != MonitorPageArea::Area_2 {
+        *real_time_net_pack_table_selected_index.lock().unwrap() =
+            Some(real_time_net_pack_table_data.lock().unwrap().len());
         real_time_net_pack_table_state.lock().unwrap().select(Some(
             real_time_net_pack_table_data.lock().unwrap().len() - 1,
         ));
@@ -252,11 +254,19 @@ fn render_real_time_net_pack_area(frame: &mut Frame, area: Rect) {
         .collect::<Row>()
         .height(REAL_TIME_NET_PACK_TABLE_ITEM_HEIGHT.try_into().unwrap())
         .style(Style::default().bg(Color::LightBlue));
+    let pack_count = real_time_net_pack_table_data.lock().unwrap().len();
     let table = Table::new(rows, widths)
         .header(header)
         .block(
             Block::bordered()
-                .title(format!("Network Packet ({} - {} - {})", 1, 2, 3))
+                .title(format!(
+                    "Network Packet ({}/{})",
+                    real_time_net_pack_table_selected_index
+                        .lock()
+                        .unwrap()
+                        .unwrap(),
+                    pack_count
+                ))
                 .border_style(
                     if *selecting_area.lock().unwrap() == MonitorPageArea::Area_2 {
                         let style = Style::default().bold();

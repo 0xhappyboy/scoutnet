@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::data::monitordata::real_time_net_pack_table_data;
@@ -13,6 +14,12 @@ use pnet::packet::Packet;
 use super::device;
 
 #[derive(Debug, Clone)]
+pub enum ProtocolType {
+    Tcp,
+    None,
+}
+
+#[derive(Debug, Clone)]
 pub struct NetPack {
     pub pack_time: String,
     pub pack_source: String,
@@ -21,6 +28,7 @@ pub struct NetPack {
     pub pack_length: String,
     pub pack_info: String,
     pub pack_version: String,
+    pub pack_protocol_type: ProtocolType,
 }
 
 impl Default for NetPack {
@@ -37,6 +45,7 @@ impl Default for NetPack {
             pack_length: "".to_string(),
             pack_info: "".to_string(),
             pack_version: "".to_string(),
+            pack_protocol_type: ProtocolType::None,
         }
     }
 }
@@ -50,6 +59,7 @@ impl NetPack {
         p_length: String,
         p_info: String,
         p_version: String,
+        p_protocol_type: ProtocolType,
     ) -> Self {
         Self {
             pack_time: p_time,
@@ -59,6 +69,7 @@ impl NetPack {
             pack_length: p_length,
             pack_info: p_info,
             pack_version: p_version,
+            pack_protocol_type: p_protocol_type,
         }
     }
 
@@ -117,8 +128,9 @@ impl NetPack {
                                     header.get_destination().to_string(),
                                     "TCP".to_string(),
                                     header.get_total_length().to_string(),
-                                    tcp.get_window().to_string(),
+                                    format!("{:?}", tcp),
                                     header.get_version().to_string(),
+                                    ProtocolType::Tcp,
                                 );
                             }
                         }
